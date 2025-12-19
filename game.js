@@ -399,8 +399,9 @@ function resizeCanvas() {
     isMobile = detectMobile();
     
     if (isMobile) {
-        const targetWidth = 1000; 
-        const scale = Math.max(1.2, targetWidth / window.innerWidth);
+        // PERFECTION: SIGNIFICANTLY zoomed out for mobile - 1800 target width
+        const targetWidth = 1800; 
+        const scale = Math.max(1.5, targetWidth / window.innerWidth);
         
         canvas.width = Math.floor(window.innerWidth * scale);
         canvas.height = Math.floor(window.innerHeight * scale);
@@ -505,9 +506,16 @@ class Ship {
         if (this.timeSlowActive) { this.timeSlowTime -= dt * 1000; if (this.timeSlowTime <= 0) this.timeSlowActive = false; updatePowerupIndicator('timeslow', this.timeSlowTime, TIMESLOW_DURATION); }
         if (this.piercingActive) { this.piercingTime -= dt * 1000; if (this.piercingTime <= 0) this.piercingActive = false; updatePowerupIndicator('piercing', this.piercingTime, POWERUP_DURATION); }
         
-        if (keys['ArrowLeft'] || keys['KeyA']) this.angle -= SHIP_ROTATION_SPEED * dt * getModifierSpeedMultiplier();
-        if (keys['ArrowRight'] || keys['KeyD']) this.angle += SHIP_ROTATION_SPEED * dt * getModifierSpeedMultiplier();
-        this.thrusting = keys['ArrowUp'] || keys['KeyW'];
+        // PERFECTION: Joystick Directional Control
+        if (mobileAngle !== null) {
+            this.angle = mobileAngle;
+            this.thrusting = mobileThrusting;
+        } else {
+            if (keys['ArrowLeft'] || keys['KeyA']) this.angle -= SHIP_ROTATION_SPEED * dt * getModifierSpeedMultiplier();
+            if (keys['ArrowRight'] || keys['KeyD']) this.angle += SHIP_ROTATION_SPEED * dt * getModifierSpeedMultiplier();
+            this.thrusting = keys['ArrowUp'] || keys['KeyW'];
+        }
+
         if (this.thrusting) {
             const thrustMult = getModifierSpeedMultiplier();
             this.vx += Math.cos(this.angle) * SHIP_THRUST * dt * thrustMult;
@@ -2540,6 +2548,9 @@ let joystickActive = false;
 let joystickStartX = 0;
 let joystickStartY = 0;
 let mobileFireActive = false;
+let mobileFireTouchId = null;
+let mobileAngle = null;
+let mobileThrusting = false;
 
 // Fullscreen toggle
 function toggleFullscreen() {
@@ -2610,45 +2621,75 @@ function initMobileControls() {
         setTimeout(resizeCanvas, 300);
     });
     
+    const mobileControls = document.getElementById('mobile-controls');
     const joystickBase = document.getElementById('joystick-base');
     const joystickStick = document.getElementById('joystick-stick');
+    const fireBtnContainer = document.getElementById('fire-button-container');
     const fireButton = document.getElementById('mobile-fire-button');
-    let joystickTouchId = null; // Track specific touch identifier
     
-    // Joystick touch handling
-    joystickBase.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        // If already active, ignore new touches on base
-        if (joystickActive) return;
+    let joystickTouchId = null;
+    
+    // PERFECTION: Dynamic Touch-to-Show Controls
+    document.addEventListener('touchstart', (e) => {
+        if (currentState !== GameState.PLAYING) return;
         
-        const touch = e.changedTouches[0];
-        joystickTouchId = touch.identifier;
-        joystickActive = true;
-        
-        const rect = joystickBase.getBoundingClientRect();
-        joystickStartX = rect.left + rect.width / 2;
-        joystickStartY = rect.top + rect.height / 2;
-        
-        // Update immediately on touch start in case of tap-move
-        updateJoystickPosition(touch.clientX, touch.clientY);
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            const x = touch.clientX;
+            const y = touch.clientY;
+            
+            if (x < window.innerWidth / 2) {
+                // Left Side: Joystick
+                if (!joystickActive) {
+                    joystickActive = true;
+                    joystickTouchId = touch.identifier;
+                    joystickStartX = x;
+                    joystickStartY = y;
+                    
+                    // Position joystick base exactly where user touched
+                    joystickBase.style.position = 'fixed';
+                    joystickBase.style.left = `${x - 70}px`; // Center of 140px base
+                    joystickBase.style.top = `${y - 70}px`;
+                    joystickBase.style.display = 'flex';
+                    mobileControls.classList.remove('hidden');
+                    
+                    updateJoystickPosition(x, y);
+                }
+            } else {
+                // Right Side: Fire
+                if (!mobileFireActive) {
+                    mobileFireActive = true;
+                    mobileFireTouchId = touch.identifier;
+                    keys['Space'] = true;
+                    
+                    // Position fire button exactly where user touched
+                    fireBtnContainer.style.position = 'fixed';
+                    fireBtnContainer.style.left = `${x - 60}px`; // Center of 120px button
+                    fireBtnContainer.style.top = `${y - 60}px`;
+                    fireBtnContainer.style.display = 'flex';
+                    mobileControls.classList.remove('hidden');
+                    
+                    // Visual/Taptic feedback
+                    fireButton.style.transform = 'scale(0.85)';
+                    if (navigator.vibrate) navigator.vibrate(20);
+                }
+            }
+        }
     }, { passive: false });
     
-    joystickBase.addEventListener('touchmove', (e) => {
-        e.preventDefault();
+    document.addEventListener('touchmove', (e) => {
         if (!joystickActive) return;
         
-        // Find the joystick touch
         for (let i = 0; i < e.changedTouches.length; i++) {
             if (e.changedTouches[i].identifier === joystickTouchId) {
-                const touch = e.changedTouches[i];
-                updateJoystickPosition(touch.clientX, touch.clientY);
+                updateJoystickPosition(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
                 break;
             }
         }
     }, { passive: false });
     
     function updateJoystickPosition(clientX, clientY) {
-        const maxDist = 45; // Slightly larger for better feel
+        const maxDist = 55; 
         let dx = clientX - joystickStartX;
         let dy = clientY - joystickStartY;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -2660,73 +2701,42 @@ function initMobileControls() {
         
         joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
         
-        // Convert joystick position to controls with better deadzone
-        const threshold = 8; // More sensitive
-        keys['ArrowUp'] = dy < -threshold;
-        keys['KeyW'] = dy < -threshold;
-        keys['ArrowLeft'] = dx < -threshold;
-        keys['KeyA'] = dx < -threshold;
-        keys['ArrowRight'] = dx > threshold;
-        keys['KeyD'] = dx > threshold;
-        keys['ArrowDown'] = dy > threshold;
-        keys['KeyS'] = dy > threshold;
+        // PERFECTION: Absolute Direction Control
+        const threshold = 10;
+        if (dist > threshold) {
+            mobileAngle = Math.atan2(dy, dx);
+            mobileThrusting = dist > threshold * 1.5;
+        } else {
+            // Keep current angle but stop thrusting in deadzone
+            mobileThrusting = false;
+        }
     }
     
-    const resetJoystick = (e) => {
-        // Only reset if the joystick touch ended
-        let shouldReset = false;
-        if (e.type === 'touchend' || e.type === 'touchcancel') {
-             for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === joystickTouchId) {
-                    shouldReset = true;
-                    break;
-                }
+    const handleTouchEnd = (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            
+            if (touch.identifier === joystickTouchId) {
+                joystickActive = false;
+                joystickTouchId = null;
+                joystickStick.style.transform = 'translate(0, 0)';
+                joystickBase.style.display = 'none';
+                mobileAngle = null; // Let standard rotation logic take over if needed
+                mobileThrusting = false;
             }
-        } else {
-            shouldReset = true; // Fallback
-        }
-
-        if (shouldReset) {
-            joystickActive = false;
-            joystickTouchId = null;
-            joystickStick.style.transform = 'translate(0, 0)';
-            keys['ArrowUp'] = false;
-            keys['KeyW'] = false;
-            keys['ArrowLeft'] = false;
-            keys['KeyA'] = false;
-            keys['ArrowRight'] = false;
-            keys['KeyD'] = false;
-            keys['ArrowDown'] = false;
-            keys['KeyS'] = false;
+            
+            if (touch.identifier === mobileFireTouchId) {
+                mobileFireActive = false;
+                mobileFireTouchId = null;
+                keys['Space'] = false;
+                fireBtnContainer.style.display = 'none';
+                fireButton.style.transform = 'scale(1)';
+            }
         }
     };
     
-    joystickBase.addEventListener('touchend', resetJoystick, { passive: false });
-    joystickBase.addEventListener('touchcancel', resetJoystick, { passive: false });
-    
-    // Fire button
-    fireButton.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        mobileFireActive = true;
-        keys['Space'] = true;
-        // visual feedback
-        fireButton.style.transform = 'scale(0.85)';
-        // Haptic feedback
-        if (navigator.vibrate) navigator.vibrate(20);
-    }, { passive: false });
-    
-    fireButton.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        mobileFireActive = false;
-        keys['Space'] = false;
-        fireButton.style.transform = 'scale(1)';
-    }, { passive: false });
-    
-    fireButton.addEventListener('touchcancel', (e) => {
-        mobileFireActive = false;
-        keys['Space'] = false;
-        fireButton.style.transform = 'scale(1)';
-    }, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('touchcancel', handleTouchEnd);
     
     // Prevent context menu on long press
     document.addEventListener('contextmenu', (e) => {

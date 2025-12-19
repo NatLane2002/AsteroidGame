@@ -1407,81 +1407,66 @@ html, body {
     z-index: 50;
 }
 
-.mobile-controls.hidden {
-    display: none;
-}
-
-.joystick-container {
-    pointer-events: auto;
-    touch-action: none;
+#mobile-controls {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 1000;
 }
 
 .joystick-base {
-    width: 120px;
-    height: 120px;
+    position: fixed;
+    display: none; /* Controlled by JS */
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
-    background: rgba(0, 240, 255, 0.1);
-    border: 3px solid rgba(0, 240, 255, 0.4);
-    display: flex;
+    background: radial-gradient(circle, rgba(0, 240, 255, 0.2) 0%, rgba(0, 100, 255, 0.1) 100%);
+    border: 3px solid rgba(0, 240, 255, 0.5);
     justify-content: center;
     align-items: center;
-    position: relative;
-    box-shadow: 
-        0 0 30px rgba(0, 240, 255, 0.2),
-        inset 0 0 20px rgba(0, 240, 255, 0.1);
-    pointer-events: auto;
-    touch-action: none;
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+    z-index: 1001;
 }
 
 .joystick-stick {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: linear-gradient(135deg, #00f0ff, #0080ff);
     box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
-    transition: transform 0.1s ease;
-    touch-action: none;
+    pointer-events: none;
 }
 
 .fire-button-container {
-    pointer-events: auto;
-    touch-action: none;
+    position: fixed;
+    display: none; /* Controlled by JS */
+    z-index: 1001;
 }
 
 .mobile-fire-button {
-    width: 100px;
-    height: 100px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(255, 100, 50, 0.3), rgba(255, 50, 50, 0.4));
+    background: radial-gradient(circle, rgba(255, 100, 50, 0.4) 0%, rgba(255, 50, 50, 0.2) 100%);
     border: 3px solid rgba(255, 100, 50, 0.6);
-    cursor: pointer;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 5px;
-    box-shadow: 
-        0 0 30px rgba(255, 100, 50, 0.3),
-        inset 0 0 20px rgba(255, 100, 50, 0.1);
-    transition: all 0.1s ease;
-    touch-action: none;
-}
-
-.mobile-fire-button:active {
-    transform: scale(0.95);
-    background: linear-gradient(135deg, rgba(255, 150, 50, 0.5), rgba(255, 100, 50, 0.6));
-    box-shadow: 
-        0 0 50px rgba(255, 100, 50, 0.5),
-        inset 0 0 30px rgba(255, 100, 50, 0.2);
+    box-shadow: 0 0 30px rgba(255, 100, 50, 0.4);
+    pointer-events: none;
 }
 
 .mobile-fire-button span:first-child {
-    font-size: 2rem;
+    font-size: 2.5rem;
 }
 
 .fire-label {
     font-family: var(--font-display);
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: rgba(255, 200, 150, 0.9);
     letter-spacing: 2px;
