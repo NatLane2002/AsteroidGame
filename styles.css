@@ -2900,3 +2900,109 @@ body.is-mobile .mobile-only {
     background: rgba(255, 0, 0, 0.1);
     box-shadow: 0 0 20px rgba(255, 0, 0, 0.2);
 }
+
+/* ========================================
+   MOBILE UI OPTIMIZATIONS
+   ======================================== */
+@media (max-width: 600px) {
+    /* 1. Fix User Profile Width to match other buttons/wallet */
+    .user-profile {
+        width: 100%;
+        box-sizing: border-box;
+        justify-content: center;
+    }
+
+    /* 2. Smaller UI Elements & Closer Spacing */
+    .game-title {
+        font-size: 2.2rem; /* Significantly smaller */
+        margin-bottom: 5px;
+    }
+    
+    .subtitle {
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+    }
+
+    .title-decoration {
+        margin: 10px auto;
+        width: 150px;
+    }
+
+    .game-button {
+        padding: 10px 10px; /* Much leaner buttons */
+        min-width: 140px;
+        font-size: 0.85rem;
+        margin: 2px;
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.4); /* Reduced glow */
+    }
+
+    .highscore-display-main {
+        padding: 8px 15px;
+        margin-bottom: 10px;
+        gap: 10px;
+    }
+    
+    .highscore-value {
+        font-size: 1.8rem;
+    }
+    
+    .highscore-trophy {
+        font-size: 1.5rem;
+    }
+    
+    .highscore-label {
+        font-size: 0.7rem;
+    }
+
+    .wallet-display {
+        padding: 8px 15px;
+        margin-bottom: 8px;
+        gap: 10px;
+    }
+    
+    .wallet-coins {
+        font-size: 1.2rem;
+    }
+
+    .menu-buttons {
+        gap: 6px; /* Tighter vertical stacking */
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .start-content {
+        padding: 15px;
+        width: 95%;
+        max-width: 100%;
+        margin-top: -20px; /* Pull slightly up to ensure center fit */
+    }
+    
+    .account-section {
+        margin-top: 5px;
+        margin-bottom: 5px;
+        width: 100%;
+    }
+    
+    /* Login button size */
+    .auth-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+        min-width: 150px;
+    }
+    
+    /* Ensure modal content fits */
+    .overlay-content {
+        padding: 15px;
+        width: 95%;
+    }
+    
+    /* Shop grid adaptation */
+    .shop-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 8px;
+    }
+    
+    .shop-item-name {
+        font-size: 0.7rem;
+    }
+}

@@ -2083,13 +2083,22 @@ function update(dt) {
     for (let i = bullets.length - 1; i >= 0; i--) {
         if (!bullets[i] || !bullets[i].isPlayer) continue;
         for (let j = asteroids.length - 1; j >= 0; j--) {
-            if (bullets[i] && bullets[i].isCollidingWith(asteroids[j])) {
+            // CRITICAL FIX: Check asteroids[j] exists to prevent crash if array shifted
+            if (bullets[i] && asteroids[j] && bullets[i].isCollidingWith(asteroids[j])) {
                 const asteroid = asteroids[j];
                 const destroyed = asteroid.hit();
                 
                 // Blast radius powerup: trigger splash damage on hit
                 if (bullets[i].hasBlastRadius) {
                     triggerBlastRadius(bullets[i].x, bullets[i].y);
+                }
+                
+                // CRITICAL FIX: Ensure array integrity after potential blast radius changes
+                if (asteroids[j] !== asteroid) {
+                    // Array shifted or asteroid removed by blast. 
+                    // Stop processing this index to avoid splicing wrong item.
+                    if (bullets[i] && !bullets[i].piercing) bullets.splice(i, 1);
+                    break; 
                 }
                 
                 if (destroyed) {
@@ -3221,24 +3230,39 @@ function initMobileControls() {
     
     let joystickTouchId = null;
     
-    // PERFECTION: Dynamic Touch-to-Show Controls + Triple Tap to Pause
+    // PERFECTION: Dynamic Touch-to-Show Controls + Triple Tap to Pause (Two Fingers Only)
     document.addEventListener('touchstart', (e) => {
         if (currentState !== GameState.PLAYING) return;
         
-        // TRIPLE TAP DETECTION
-        const currentTime = Date.now();
-        const tapDelay = 300; // ms
-        if (currentTime - lastTapTime < tapDelay) {
-            tapCount++;
+        // TRIPLE TAP DETECTION (TWO FINGERS CLOSE TOGETHER)
+        // Prevents accidental pauses during "Joystick + Fire" gameplay
+        if (e.touches.length === 2) {
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            // Calculate distance between fingers
+            const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+            
+            // If fingers are relatively close (< 350px), count as a gesture
+            if (dist < 350) {
+                const currentTime = Date.now();
+                const tapDelay = 500; // 500ms allowed between taps
+                
+                if (currentTime - lastTapTime < tapDelay) {
+                    tapCount++;
+                } else {
+                    tapCount = 1; // Reset to 1 (first meaningful tap)
+                }
+                lastTapTime = currentTime;
+                
+                if (tapCount >= 3) {
+                    tapCount = 0;
+                    pauseGame();
+                    return;
+                }
+            }
         } else {
-            tapCount = 1;
-        }
-        lastTapTime = currentTime;
-        
-        if (tapCount >= 3) {
-            tapCount = 0;
-            pauseGame();
-            return;
+            // Count resets if we see single touches too long, but we let time handle it
+            // We do NOT reset count here to allow for imperfect 0->1->2 finger landings
         }
         
         for (let i = 0; i < e.changedTouches.length; i++) {
