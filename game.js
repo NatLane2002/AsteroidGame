@@ -60,7 +60,7 @@ let activeModifiers = {
     fastMode: false,      // Ship moves 2x speed
     immortalMode: false,  // Never die, coins at 33% (CHEAT)
     slowMode: false,      // Enemies slowed, coins at 50% (CHEAT)
-    nightmareMode: false, // Enemies 1.5x speed, Asteroids 2x spawn, Coins 300%
+    nightmareMode: false, // Enemies 2.0x speed, Asteroids 2.5x spawn, Coins 300%
     largeMode: false      // Ship 2x size, Coins 150%
 };
 
@@ -88,7 +88,7 @@ function getModifierSpeedMultiplier() {
 function getModifierEnemySpeed() {
     let speed = 1;
     if (activeModifiers.slowMode) speed *= 0.5;
-    if (activeModifiers.nightmareMode) speed *= 1.5;
+    if (activeModifiers.nightmareMode) speed *= 2.0;
     return speed;
 }
 
@@ -1985,7 +1985,12 @@ function nextLevel() {
     coinItems = [];
     document.getElementById('new-level').textContent = level;
     queueNotification('levelup-notification', 1500);
-    setTimeout(() => { spawnAsteroids(3 + Math.floor(level * 0.8)); bossPhase = false; bossWaveComplete = false; }, 2000);
+    
+    // Calculate asteroid count with modifiers
+    let asteroidCount = 3 + Math.floor(level * 0.8);
+    if (activeModifiers.nightmareMode) asteroidCount = Math.floor(asteroidCount * 2.5);
+    
+    setTimeout(() => { spawnAsteroids(asteroidCount); bossPhase = false; bossWaveComplete = false; }, 2000);
     updateHUD();
     checkAchievements(); // Check for level-based achievements
 }

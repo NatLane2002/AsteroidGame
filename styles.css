@@ -2907,9 +2907,13 @@ body.is-mobile .mobile-only {
 @media (max-width: 600px) {
     /* 1. Fix User Profile Width to match other buttons/wallet */
     .user-profile {
-        width: 100%;
-        box-sizing: border-box;
-        justify-content: center;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 5px 0 0 0 !important;
+        border-radius: 10px !important; /* Match wallet corners for equal visual length */
+        box-sizing: border-box !important;
+        justify-content: center !important;
+        padding: 8px 15px !important; /* Match wallet padding */
     }
 
     /* 2. Smaller UI Elements & Closer Spacing */
