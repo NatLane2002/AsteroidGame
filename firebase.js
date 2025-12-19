@@ -432,7 +432,7 @@ function getAuthErrorMessage(code) {
     const messages = {
         'auth/email-already-in-use': 'This email is already registered. Try signing in instead.',
         'auth/invalid-email': 'Please enter a valid email address.',
-        'auth/operation-not-allowed': 'Email/password accounts are not enabled.',
+        'auth/operation-not-allowed': 'Sign-in method disabled. Enable Email/Password in Firebase Console.',
         'auth/weak-password': 'Password should be at least 6 characters.',
         'auth/user-disabled': 'This account has been disabled.',
         'auth/user-not-found': 'No account found with this email.',
