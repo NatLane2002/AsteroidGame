@@ -19,8 +19,8 @@ let asteroidsDestroyed = 0, aliensDestroyed = 0, spacePiratesDestroyed = 0;
 let gameData = {
     highScore: 0,
     totalCoins: 0,
-    ownedItems: { skins: ['default'], trails: ['default'], bullets: ['default'] },
-    equippedItems: { skin: 'default', trail: 'default', bullet: 'default' },
+    ownedItems: { skins: ['default'], trails: ['default'], bullets: ['default'], backgrounds: ['default'] },
+    equippedItems: { skin: 'default', trail: 'default', bullet: 'default', background: 'default' },
     stats: { totalGames: 0, totalAsteroids: 0, totalAliens: 0, totalSpacePirates: 0, totalCoinsEarned: 0 },
     achievements: [], // Array of unlocked achievement IDs
     modifiers: { fastMode: false, immortalMode: false, slowMode: false, nightmareMode: false }
@@ -102,6 +102,11 @@ function loadGameData() {
         try {
             const parsed = JSON.parse(saved);
             gameData = { ...gameData, ...parsed };
+            
+            // Ensure background data exists (for old saves)
+            if (!gameData.ownedItems.backgrounds) { gameData.ownedItems.backgrounds = ['default']; }
+            if (!gameData.equippedItems.background) { gameData.equippedItems.background = 'default'; }
+            
             // Restore modifiers if present in save
             if (gameData.modifiers) {
                 activeModifiers = { ...activeModifiers, ...gameData.modifiers };
@@ -361,13 +366,67 @@ const SHOP_ITEMS = {
         // 🎄 Christmas Special Tier (Most Expensive!)
         { id: 'xmas_bulb', name: '🔴 Xmas Bulb', price: 650, color: '#ff0000', glow: 'rgba(255, 0, 0, 0.5)', special: 'bulb' },
         { id: 'xmas_snowball', name: '⚪ Snowball', price: 700, color: '#ffffff', glow: 'rgba(200, 230, 255, 0.6)', special: 'snowball' }
+    ],
+    backgrounds: [
+        { id: 'default', name: 'Classic Stars', price: 0 },
+        { id: 'nebula_drift', name: 'Nebula Drift', price: 1000 },
+        { id: 'cyber_grid', name: 'Cyber Grid', price: 1500 },
+        { id: 'starfield_velocity', name: 'Warp Speed', price: 2000 },
+        { id: 'plasma_storm', name: 'Plasma Storm', price: 2500 },
+        { id: 'void_vortex', name: 'Void Vortex', price: 3000 },
+        { id: 'retro_wave', name: 'Retro Wave', price: 3500 },
+        { id: 'deep_ocean', name: 'Deep Ocean', price: 4000 },
+        { id: 'crystal_caverns', name: 'Crystal Cave', price: 4500 },
+        { id: 'golden_nebula', name: 'Golden Dust', price: 5000 },
+        { id: 'crimson_tide', name: 'Crimson Tide', price: 5500 },
+        { id: 'emerald_expanse', name: 'Emerald Fog', price: 6000 },
+        { id: 'sapphire_dust', name: 'Sapphire', price: 6500 },
+        { id: 'obsidian_void', name: 'Obsidian', price: 7000 },
+        { id: 'binary_rain', name: 'Binary Rain', price: 7500 },
+        { id: 'aurora', name: 'Aurora', price: 8000 },
+        { id: 'quantum_foam', name: 'Quantum Foam', price: 8500 },
+        { id: 'hyperspace', name: 'Hyperspace', price: 9000 },
+        { id: 'galactic_core', name: 'Galactic Core', price: 9500 },
+        { id: 'rainbow_road', name: 'Rainbow Road', price: 10000 },
+        { id: 'burning_horizon', name: 'Burning Horizon', price: 12000 }
     ]
 };
 
 // ========================================
 // UTILITY FUNCTIONS
 // ========================================
-function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; generateStars(); }
+function checkRotation() {
+    isMobile = detectMobile();
+    if (!isMobile) {
+        hideOverlay('rotate-overlay');
+        return;
+    }
+    
+    const isPortrait = window.innerHeight > window.innerWidth;
+    if (isPortrait) {
+        showOverlay('rotate-overlay');
+    } else {
+        hideOverlay('rotate-overlay');
+    }
+}
+
+function resizeCanvas() { 
+    isMobile = detectMobile();
+    checkRotation();
+    
+    if (isMobile) {
+        const targetWidth = 1000; // Increased virtual width for even better landscape gameplay
+        const scale = Math.max(1.2, targetWidth / window.innerWidth);
+        
+        canvas.width = Math.floor(window.innerWidth * scale);
+        canvas.height = Math.floor(window.innerHeight * scale);
+    } else {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    
+    generateStars(); 
+}
 function randomRange(min, max) { return Math.random() * (max - min) + min; }
 function randomInt(min, max) { return Math.floor(randomRange(min, max + 1)); }
 function distance(x1, y1, x2, y2) { return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2); }
@@ -1395,8 +1454,8 @@ function spawnBossWave() {
     soundManager.playLevelUp();
 }
 
-function startGame() {
-    soundManager.init();
+// Renamed to separate logic from UI flow
+function initGameLogic() {
     currentState = GameState.PLAYING;
     score = 0; level = 1; lives = 3; coinsThisGame = 0;
     asteroidsDestroyed = 0; aliensDestroyed = 0; spacePiratesDestroyed = 0;
@@ -1410,12 +1469,88 @@ function startGame() {
     gameData.stats.totalGames++;
     saveGameData();
     checkAchievements(); // Check for first game achievement
-    updateHUD(); hideOverlay('start-screen'); hideOverlay('gameover-screen'); hideOverlay('pause-screen');
+    updateHUD(); 
+    hideOverlay('start-screen'); 
+    hideOverlay('gameover-screen'); 
+    hideOverlay('pause-screen');
     
     // Warn user if cheats are active
     if (hasCheatModifiers()) {
         queueNotification('cheat-warning-notification', 4000);
     }
+    
+    // Show mobile controls if needed
+    if (isMobile) showMobileControls();
+}
+
+// New Start Game Manager
+// New Start Game Manager
+function startGame() {
+    soundManager.init();
+    
+    // Check mobile status
+    isMobile = detectMobile();
+    
+    if (isMobile) {
+        // Attempt to lock landscape orientation (Screen Orientation API)
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(e => console.log("Orientation lock denied"));
+        }
+        
+        // Final orientation check before countdown
+        checkRotation();
+    }
+    
+    beginCountdown();
+}
+
+function beginCountdown() {
+    // Clear any existing countdown interval to prevent overlaps/loops
+    if (window.countdownInterval) clearInterval(window.countdownInterval);
+
+    // Hide other screens
+    hideOverlay('start-screen');
+    hideOverlay('gameover-screen');
+    hideOverlay('pause-screen');
+    
+    // Ensure any stuck rotation overlay is hidden (just in case)
+    const rotOverlay = document.getElementById('rotate-overlay');
+    if (rotOverlay) rotOverlay.classList.add('hidden');
+    
+    const overlay = document.getElementById('countdown-overlay');
+    const text = document.getElementById('countdown-text');
+    overlay.classList.remove('hidden');
+    
+    let count = 3;
+    text.textContent = count;
+    
+    // Ensure text animation plays
+    text.classList.remove('pulse-anim');
+    void text.offsetWidth; // trigger reflow
+    text.classList.add('pulse-anim');
+    
+        window.countdownInterval = setInterval(() => {
+            count--;
+            if (count > 0) {
+                text.textContent = count;
+                // Reset animation
+                text.classList.remove('pulse-anim');
+                void text.offsetWidth; // trigger reflow
+                text.classList.add('pulse-anim');
+            } else {
+                clearInterval(window.countdownInterval);
+                window.countdownInterval = null; // Clean up
+                text.textContent = "GO!";
+                text.classList.remove('pulse-anim');
+                void text.offsetWidth; // trigger reflow
+                text.classList.add('pulse-anim');
+                
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    initGameLogic();
+                }, 500);
+            }
+        }, 1000);
 }
 
 function endGame() {
@@ -1450,8 +1585,6 @@ function goHome() {
     if (currentState === GameState.PLAYING || currentState === GameState.PAUSED) {
         gameData.totalCoins += coinsThisGame;
         gameData.stats.totalCoinsEarned += coinsThisGame;
-        // NOTE: We do NOT update high score or stats like asteroids destroyed, as the game was abandoned.
-        // But the user keeps their loot!
         saveGameData(); 
     }
 
@@ -1460,6 +1593,9 @@ function goHome() {
     hideOverlay('gameover-screen');
     showOverlay('start-screen');
     updateWalletDisplays();
+    
+    // Hide mobile controls
+    hideMobileControls();
 }
 
 function pauseGame() { if (currentState === GameState.PLAYING) { currentState = GameState.PAUSED; showOverlay('pause-screen'); } }
@@ -1699,27 +1835,24 @@ function update(dt) {
 }
 
 function render() {
-    ctx.fillStyle = '#0a0a1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+    // Dynamic Background Rendering
+    drawDynamicBackground(gameData.equippedItems.background, ctx, canvas.width, canvas.height);
+
     // Apply screen shake
     updateScreenShake(deltaTime);
     const shake = getScreenShakeOffset();
     ctx.save();
     ctx.translate(shake.x, shake.y);
     
-    // Time slow visual effect
+    // Time slow visual effect overlay
     if (ship && ship.timeSlowActive) {
-        ctx.fillStyle = 'rgba(68, 136, 255, 0.05)';
+        ctx.fillStyle = 'rgba(68, 136, 255, 0.1)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
     
-    const time = Date.now() / 1000;
-    stars.forEach(s => {
-        const tw = Math.sin(time * s.twinkleSpeed) * 0.3 + 0.7;
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${s.brightness * tw})`; ctx.fill();
-    });
+    // Default starfield is now handled inside 'default' background type, 
+    // BUT we still render persistent game elements on top.
+
     particles.forEach(p => p.draw());
     coinItems.forEach(c => c.draw());
     powerups.forEach(p => p.draw());
@@ -1732,6 +1865,289 @@ function render() {
     
     // End screen shake transform
     ctx.restore();
+}
+
+function drawDynamicBackground(type, ctx, w, h) {
+    const time = Date.now() / 1000;
+    
+    // Helper for gradients
+    const fillRect = (c) => { ctx.fillStyle = c; ctx.fillRect(0,0,w,h); };
+    
+    // Clear/Base
+    fillRect('#0a0a1a');
+
+    switch (type) {
+        case 'nebula_drift':
+            const g1 = ctx.createLinearGradient(0, 0, w, h);
+            g1.addColorStop(0, '#1a0a2a');
+            g1.addColorStop(0.5, '#2a0a3a');
+            g1.addColorStop(1, '#0a0a1a');
+            fillRect(g1);
+            ctx.fillStyle = 'rgba(100, 0, 255, 0.05)';
+            for(let i=0; i<5; i++) {
+                ctx.beginPath();
+                ctx.arc(w/2 + Math.sin(time*0.5+i)*w*0.3, h/2 + Math.cos(time*0.3+i)*h*0.3, 200+Math.sin(time)*50, 0, Math.PI*2);
+                ctx.fill();
+            }
+            break;
+            
+        case 'cyber_grid':
+            fillRect('#000510');
+            ctx.strokeStyle = '#00f0ff';
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.2;
+            const gridSize = 40;
+            const offset = (time * 50) % gridSize;
+            ctx.beginPath();
+            // Vertical lines
+            for (let x = offset; x < w; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+            // Horizontal lines (perspective feel)
+            for (let y = 0; y < h; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            break;
+
+        case 'starfield_velocity':
+            fillRect('#000000');
+            ctx.fillStyle = '#ffffff';
+            const centerX = w/2, centerY = h/2;
+            for(let i=0; i<100; i++) {
+                const angle = i * 137.5; // Golden angle
+                const dist = (time * 50 + i * 10) % (Math.max(w,h)/1.5);
+                const x = centerX + Math.cos(angle) * dist;
+                const y = centerY + Math.sin(angle) * dist;
+                const size = (dist / 300) * 2;
+                ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2); ctx.fill();
+            }
+            break;
+
+        case 'plasma_storm':
+            fillRect('#1a0500');
+            ctx.fillStyle = 'rgba(255, 50, 0, 0.1)';
+            for(let i=0; i<10; i++) {
+                let x = w/2 + Math.sin(time + i)*w*0.4;
+                let y = h/2 + Math.cos(time*1.5 + i)*h*0.4;
+                ctx.beginPath(); ctx.arc(x, y, 100, 0, Math.PI*2); ctx.fill();
+            }
+            break;
+
+        case 'void_vortex':
+            fillRect('#050505');
+            ctx.translate(w/2, h/2);
+            ctx.rotate(time * 0.2);
+            ctx.fillStyle = 'rgba(100, 100, 255, 0.1)';
+            for(let i=0; i<20; i++) {
+                ctx.rotate(0.5);
+                ctx.fillRect(50 + i*10, -10, 200, 20);
+            }
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform logic correctly
+            break;
+
+         case 'retro_wave':
+            const gRetro = ctx.createLinearGradient(0, 0, 0, h);
+            gRetro.addColorStop(0, '#100020');
+            gRetro.addColorStop(0.5, '#400060');
+            gRetro.addColorStop(1, '#ff00aa');
+            fillRect(gRetro);
+            // Sun
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath(); ctx.arc(w/2, h*0.4, 80, 0, Math.PI*2); ctx.fill();
+            // Horizon lines
+            ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2;
+            for(let y=h/2; y<h; y+=20 + (y-h/2)*0.5) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            }
+            break;
+
+         case 'deep_ocean':
+            const gOcean = ctx.createLinearGradient(0, 0, 0, h);
+            gOcean.addColorStop(0, '#000022');
+            gOcean.addColorStop(1, '#001144');
+            fillRect(gOcean);
+            ctx.fillStyle = 'rgba(100, 200, 255, 0.1)';
+            for(let i=0; i<20; i++) {
+                const y = (time * 30 + i * 50) % h;
+                const x = w/2 + Math.sin(time + i)*w*0.4;
+                ctx.beginPath(); ctx.arc(x, y, 5 + i, 0, Math.PI*2); ctx.fill();
+            }
+            break;
+
+         case 'crystal_caverns':
+            fillRect('#050510');
+            ctx.strokeStyle = 'rgba(100, 255, 255, 0.2)';
+            ctx.lineWidth = 2;
+            for(let i=0; i<15; i++) {
+                ctx.beginPath();
+                const s = 50 + i*20;
+                const x = w/2 + Math.sin(time*0.5+i)*200;
+                const y = h/2 + Math.cos(time*0.4+i)*200;
+                ctx.rect(x-s/2, y-s/2, s, s);
+                ctx.stroke();
+            }
+            break;
+
+         case 'golden_nebula':
+            fillRect('#1a1100');
+            ctx.fillStyle = 'rgba(255, 200, 0, 0.05)';
+            for(let i=0; i<30; i++) {
+                const r = 20 + Math.random()*50;
+                const x = (time*20 + i*100) % (w+200) - 100;
+                const y = (Math.sin(time + i)*h/2) + h/2;
+                ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+            }
+            break;
+
+         case 'crimson_tide':
+             fillRect('#220000');
+             ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
+             for(let i=0; i<5; i++) {
+                 ctx.beginPath();
+                 ctx.moveTo(0, h/2 + i*20);
+                 for(let x=0; x<w; x+=20) {
+                     ctx.lineTo(x, h/2 + Math.sin(x/100 + time + i)*50 + i*30);
+                 }
+                 ctx.lineTo(w, h); ctx.lineTo(0, h);
+                 ctx.fill();
+             }
+             break;
+
+         case 'emerald_expanse':
+             fillRect('#001105');
+             ctx.fillStyle = 'rgba(0, 255, 100, 0.05)';
+             for(let i=0; i<20; i++) {
+                 const x = (Math.random()*w);
+                 const y = (time*30 + Math.random()*h) % h;
+                 const size = Math.random()*30 + 10;
+                 ctx.fillRect(x, y, size, size);
+             }
+             break;
+
+         case 'sapphire_dust':
+             fillRect('#00051a');
+             ctx.fillStyle = 'rgba(0, 100, 255, 0.8)';
+             for(let i=0; i<100; i++) {
+                 const x = Math.sin(i*123 + time*0.1)*w;
+                 const y = Math.cos(i*321 + time*0.1)*h;
+                 // Normalize to screen
+                 const sx = (x + w) % w; const sy = (y + h) % h; // Simple wrap ??
+                 // Better random scatter
+                 const rx = (i * 137.5 * 10) % w;
+                 const ry = (i * 90.5 * 10) % h;
+                 const tw = Math.sin(time * 5 + i) * 0.5 + 0.5;
+                 ctx.globalAlpha = tw;
+                 ctx.beginPath(); ctx.arc(rx, ry, 2, 0, Math.PI*2); ctx.fill();
+             }
+             ctx.globalAlpha = 1;
+             break;
+
+         case 'obsidian_void':
+             fillRect('#000000');
+             ctx.strokeStyle = '#222222';
+             ctx.lineWidth = 3;
+             ctx.beginPath();
+             ctx.arc(w/2, h/2, 100 + Math.sin(time)*20, 0, Math.PI*2);
+             ctx.stroke();
+             ctx.beginPath();
+             ctx.arc(w/2, h/2, 200 + Math.cos(time)*30, 0, Math.PI*2);
+             ctx.stroke();
+             break;
+
+         case 'binary_rain':
+             fillRect('#000500');
+             ctx.fillStyle = '#00ff00';
+             ctx.font = '14px monospace';
+             const cols = Math.floor(w / 15);
+             for(let i=0; i<cols; i++) {
+                 const dropY = (time * 200 + i * 50) % (h + 100);
+                 ctx.fillText(Math.random() > 0.5 ? '1' : '0', i*15, dropY);
+             }
+             break;
+
+         case 'aurora':
+             fillRect('#000510');
+             const gA = ctx.createLinearGradient(0, 0, w, 0);
+             gA.addColorStop(0, 'rgba(0, 255, 100, 0)');
+             gA.addColorStop(0.5, 'rgba(0, 255, 100, 0.2)');
+             gA.addColorStop(1, 'rgba(0, 255, 100, 0)');
+             ctx.fillStyle = gA;
+             ctx.beginPath();
+             ctx.moveTo(0, h/2);
+             for(let x=0; x<=w; x+=10) ctx.lineTo(x, h/2 + Math.sin(x/100 + time)*100);
+             ctx.lineTo(w, h); ctx.lineTo(0, h);
+             ctx.fill();
+             break;
+
+         case 'quantum_foam':
+             fillRect('#051010');
+             ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+             for(let i=0; i<20; i++) {
+                 const bump = Math.sin(time + i)*20;
+                 ctx.beginPath(); ctx.arc((i*50 + time*20)%w, h/2 + bump, 10 + Math.sin(time*2)*5, 0, Math.PI*2); ctx.fill();
+             }
+             break;
+
+         case 'hyperspace':
+             fillRect('#000000');
+             ctx.fillStyle = '#ffffff';
+             const cx = w/2, cy = h/2;
+             for(let i=0; i<50; i++) {
+                 const z = (time * 100 + i * 20) % 1000;
+                 if (z < 1) continue;
+                 const scale = 500 / z;
+                 const x = cx + (Math.cos(i)*w) * scale;
+                 const y = cy + (Math.sin(i)*h) * scale;
+                 const size = scale * 3;
+                 ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2); ctx.fill();
+             }
+             break;
+
+         case 'galactic_core':
+             const gC = ctx.createRadialGradient(w/2, h/2, 10, w/2, h/2, w/1.5);
+             gC.addColorStop(0, '#ffffff');
+             gC.addColorStop(0.1, '#ffddaa');
+             gC.addColorStop(0.4, '#441166');
+             gC.addColorStop(1, '#000000');
+             fillRect(gC);
+             break;
+
+         case 'rainbow_road':
+             const hue = (time * 50) % 360;
+             fillRect(`hsl(${hue}, 20%, 5%)`);
+             ctx.strokeStyle = `hsl(${(hue+180)%360}, 100%, 50%)`;
+             ctx.lineWidth = 5;
+             ctx.beginPath();
+             ctx.moveTo(0, h);
+             ctx.bezierCurveTo(w/2, h/2 + Math.sin(time)*100, w/2, h/2 - Math.sin(time)*100, w, 0);
+             ctx.stroke();
+             break;
+             
+        case 'burning_horizon':
+            const gBurn = ctx.createLinearGradient(0, h/2, 0, h);
+            gBurn.addColorStop(0, '#330000');
+            gBurn.addColorStop(0.5, '#aa2200');
+            gBurn.addColorStop(1, '#ff8800');
+            fillRect('#000000');
+            ctx.fillStyle = gBurn;
+            ctx.fillRect(0, h/2, w, h/2);
+            // Embers
+            ctx.fillStyle = 'rgba(255, 200, 0, 0.8)';
+            for(let i=0; i<30; i++) {
+                const ex = (Math.random()*w);
+                const ey = h - (time*100 + i*50) % (h/2);
+                ctx.beginPath(); ctx.arc(ex, ey, Math.random()*3, 0, Math.PI*2); ctx.fill();
+            }
+            break;
+
+        case 'default':
+        default:
+            fillRect('#0a0a1a');
+            stars.forEach(s => {
+                const tw = Math.sin(time * s.twinkleSpeed) * 0.3 + 0.7;
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,255,255,${s.brightness * tw})`; ctx.fill();
+            });
+            break;
+    }
 }
 
 function gameLoop(t) {
@@ -1808,14 +2224,16 @@ function initShop() {
 }
 
 function renderShopItems() {
-    ['skins', 'trails', 'bullets'].forEach(category => {
+    ['skins', 'trails', 'bullets', 'backgrounds'].forEach(category => {
         const grid = document.getElementById(`${category}-grid`);
+        if (!grid) return;
         grid.innerHTML = '';
         SHOP_ITEMS[category].forEach(item => {
             const owned = gameData.ownedItems[category].includes(item.id);
             const equipped = (category === 'skins' && gameData.equippedItems.skin === item.id) ||
                            (category === 'trails' && gameData.equippedItems.trail === item.id) ||
-                           (category === 'bullets' && gameData.equippedItems.bullet === item.id);
+                           (category === 'bullets' && gameData.equippedItems.bullet === item.id) ||
+                           (category === 'backgrounds' && gameData.equippedItems.background === item.id);
             const div = document.createElement('div');
             div.className = `shop-item ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}`;
             div.innerHTML = `
@@ -1840,6 +2258,12 @@ function drawShopPreview(canvas, category, item) {
     
     ctx.save();
     ctx.scale(scale, scale);
+    
+    if (category === 'backgrounds') {
+        ctx.restore(); // Undo scale for background as it takes w/h
+        drawDynamicBackground(item.id, ctx, canvas.width, canvas.height);
+        return;
+    }
     
     // Note: The subsequent drawing commands assume a 50x50 coordinate space.
     // By scaling the context first, we can reuse exact same logic for any canvas size.
@@ -2003,7 +2427,16 @@ function handleShopClick(category, item, owned, equipped) {
     canvas.style.height = '100%';
     
     iconContainer.appendChild(canvas);
-    drawShopPreview(canvas, category, item);
+    
+    if (category === 'backgrounds') {
+         const ctx = canvas.getContext('2d');
+         // Clean
+         ctx.clearRect(0, 0, 100, 100);
+         // Render bg
+         drawDynamicBackground(item.id, ctx, 100, 100);
+    } else {
+        drawShopPreview(canvas, category, item);
+    }
     
     showOverlay('shop-confirm-modal');
 }
@@ -2018,7 +2451,8 @@ function confirmShopAction() {
     if (owned) {
         if (category === 'skins') gameData.equippedItems.skin = item.id;
         else if (category === 'trails') gameData.equippedItems.trail = item.id;
-        else gameData.equippedItems.bullet = item.id;
+        else if (category === 'bullets') gameData.equippedItems.bullet = item.id;
+        else if (category === 'backgrounds') gameData.equippedItems.background = item.id;
         saveGameData();
         renderShopItems();
     } else if (gameData.totalCoins >= item.price) {
@@ -2169,9 +2603,26 @@ const fullscreenBtn = document.getElementById('fullscreen-button');
 if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
 
 function detectMobile() {
-    return ('ontouchstart' in window) || 
-           (navigator.maxTouchPoints > 0) || 
-           (window.matchMedia('(pointer: coarse)').matches);
+    // ULTRA-STRICT CHECK to prevent Desktop False Positives
+    
+    // 1. Hover Capability Check:
+    // If the device's primary input can hover (Mouse/Trackpad), it is DESKTOP.
+    // This is the single reliable way to filter out PCs/Laptops.
+    const canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+    if (canHover) return false;
+
+    // 2. Touch Capability Check:
+    // Must have physical touch points.
+    const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (!hasTouch) return false;
+
+    // 3. User Agent Identity Check:
+    // Must explicitly identify as a mobile platform.
+    const ua = navigator.userAgent;
+    const isMobileUA = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    const isIPadOS = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    return isMobileUA || isIPadOS;
 }
 
 function showMobileControls() {
@@ -2185,6 +2636,13 @@ function hideMobileControls() {
 function initMobileControls() {
     if (!detectMobile()) return;
     isMobile = true;
+    
+    // Check orientation on start
+    checkRotation();
+    window.addEventListener('orientationchange', () => {
+        setTimeout(checkRotation, 200); // Small delay to let viewport update
+        setTimeout(resizeCanvas, 300);
+    });
     
     const joystickBase = document.getElementById('joystick-base');
     const joystickStick = document.getElementById('joystick-stick');
@@ -2224,7 +2682,7 @@ function initMobileControls() {
     }, { passive: false });
     
     function updateJoystickPosition(clientX, clientY) {
-        const maxDist = 35;
+        const maxDist = 45; // Slightly larger for better feel
         let dx = clientX - joystickStartX;
         let dy = clientY - joystickStartY;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -2237,14 +2695,14 @@ function initMobileControls() {
         joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
         
         // Convert joystick position to controls with better deadzone
-        const threshold = 10; // Lower threshold for responsiveness
+        const threshold = 8; // More sensitive
         keys['ArrowUp'] = dy < -threshold;
         keys['KeyW'] = dy < -threshold;
         keys['ArrowLeft'] = dx < -threshold;
         keys['KeyA'] = dx < -threshold;
         keys['ArrowRight'] = dx > threshold;
         keys['KeyD'] = dx > threshold;
-        keys['ArrowDown'] = dy > threshold; // Added Down support just in case
+        keys['ArrowDown'] = dy > threshold;
         keys['KeyS'] = dy > threshold;
     }
     
@@ -2286,7 +2744,9 @@ function initMobileControls() {
         mobileFireActive = true;
         keys['Space'] = true;
         // visual feedback
-        fireButton.style.transform = 'scale(0.9)';
+        fireButton.style.transform = 'scale(0.85)';
+        // Haptic feedback
+        if (navigator.vibrate) navigator.vibrate(20);
     }, { passive: false });
     
     fireButton.addEventListener('touchend', (e) => {
@@ -2304,7 +2764,7 @@ function initMobileControls() {
     
     // Prevent context menu on long press
     document.addEventListener('contextmenu', (e) => {
-        if (currentState === GameState.PLAYING) {
+        if (currentState === GameState.PLAYING || isMobile) {
             e.preventDefault();
         }
     });
@@ -2447,20 +2907,6 @@ function init() {
     requestAnimationFrame(gameLoop);
 }
 
-// Override startGame to show/hide mobile controls
-const originalStartGame = startGame;
-startGame = function() {
-    originalStartGame();
-    if (isMobile) showMobileControls();
-};
-
-// Override goHome to hide mobile controls
-const originalGoHome = goHome;
-goHome = function() {
-    originalGoHome();
-    hideMobileControls();
-};
-
 // Override endGame to hide mobile controls and play sound
 const originalEndGame = endGame;
 endGame = function() {
@@ -2468,5 +2914,6 @@ endGame = function() {
     hideMobileControls();
     soundManager.playGameOver();
 };
+
 
 init();

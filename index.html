@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="Asteroid Blaster - A classic arcade-style asteroid shooter game with modern graphics, cat alien bosses, and customization shop">
+    <meta name="description" content="Cosmic Cats - A classic arcade-style asteroid shooter game with modern graphics, cat alien bosses, and customization shop">
     <title>Cosmic Cats</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -101,7 +101,7 @@
         <!-- Start Screen -->
         <div id="start-screen" class="overlay">
             <div class="overlay-content start-content">
-                <h1 class="game-title">ASTEROID<br><span class="accent">BLASTER</span></h1>
+                <h1 class="game-title">COSMIC<br><span class="accent">CATS</span></h1>
                 <div class="title-decoration"></div>
                 <p class="subtitle">Navigate through the asteroid field and defeat the Cat Aliens!</p>
                 
@@ -262,6 +262,7 @@
                     <button class="shop-tab active" data-tab="skins">🚀 Ships</button>
                     <button class="shop-tab" data-tab="trails">✨ Trails</button>
                     <button class="shop-tab" data-tab="bullets">💫 Bullets</button>
+                    <button class="shop-tab" data-tab="backgrounds">🌌 Backgrounds</button>
                 </div>
                 
                 <div class="shop-section" id="skins-section">
@@ -274,6 +275,10 @@
                 
                 <div class="shop-section hidden" id="bullets-section">
                     <div class="shop-grid" id="bullets-grid"></div>
+                </div>
+
+                <div class="shop-section hidden" id="backgrounds-section">
+                    <div class="shop-grid" id="backgrounds-grid"></div>
                 </div>
                 
                 <button id="shop-close-button" class="game-button secondary">
@@ -298,6 +303,26 @@
                     <button id="confirm-yes" class="game-button">CONFIRM</button>
                     <button id="confirm-no" class="game-button secondary">CANCEL</button>
                 </div>
+            </div>
+        </div>
+
+
+
+        <!-- Countdown Overlay -->
+        <div id="countdown-overlay" class="overlay hidden" style="z-index: 2500; background: rgba(0,0,0,0.3);">
+            <div class="countdown-number" id="countdown-text">3</div>
+        </div>
+
+        <!-- Rotate Device Overlay -->
+        <div id="rotate-overlay" class="overlay hidden" style="z-index: 3000;">
+            <div class="overlay-content rotate-content">
+                <div class="rotate-icon">📱</div>
+                <h2 class="rotate-title">PORTRAIT DETECTED</h2>
+                <div class="rotate-device-anim">
+                    <div class="phone"></div>
+                    <div class="arrow"></div>
+                </div>
+                <p class="rotate-desc">Please rotate your device to <strong>LANDSCAPE</strong> for the best experience.</p>
             </div>
         </div>
 
