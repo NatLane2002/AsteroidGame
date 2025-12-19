@@ -2128,7 +2128,9 @@ function update(dt) {
                 if (bullets[i].hasBlastRadius) {
                     triggerBlastRadius(bullets[i].x, bullets[i].y);
                 }
-                if (catAliens[j].takeDamage()) {
+                
+                // CRITICAL FIX: Ensure the alien still exists at this index (it might have been destroyed by blast radius)
+                if (catAliens[j] && catAliens[j].takeDamage()) {
                     createExplosion(catAliens[j].x, catAliens[j].y, '#aa44ff', 25);
                     for (let k = 0; k < 5; k++) spawnCoin(catAliens[j].x + randomRange(-30, 30), catAliens[j].y + randomRange(-30, 30));
                     // Combo system for aliens too
@@ -2169,7 +2171,9 @@ function update(dt) {
                 if (bullets[i].hasBlastRadius) {
                     triggerBlastRadius(bullets[i].x, bullets[i].y);
                 }
-                if (spacePirates[j].takeDamage()) {
+                
+                // CRITICAL FIX: Ensure the pirate still exists at this index
+                if (spacePirates[j] && spacePirates[j].takeDamage()) {
                     createExplosion(spacePirates[j].x, spacePirates[j].y, '#ff6600', 20);
                     for (let k = 0; k < 3; k++) spawnCoin(spacePirates[j].x + randomRange(-20, 20), spacePirates[j].y + randomRange(-20, 20));
                     increaseCombo();
@@ -2204,7 +2208,9 @@ function update(dt) {
                 if (bullets[i].hasBlastRadius) {
                     triggerBlastRadius(bullets[i].x, bullets[i].y);
                 }
-                if (cosmicJellyfish[j].takeDamage()) {
+                
+                // CRITICAL FIX: Ensure the jellyfish still exists at this index
+                if (cosmicJellyfish[j] && cosmicJellyfish[j].takeDamage()) {
                     createExplosion(cosmicJellyfish[j].x, cosmicJellyfish[j].y, '#88aaff', 22);
                     for (let k = 0; k < 4; k++) spawnCoin(cosmicJellyfish[j].x + randomRange(-25, 25), cosmicJellyfish[j].y + randomRange(-25, 25));
                     increaseCombo();

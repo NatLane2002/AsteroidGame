@@ -194,42 +194,57 @@ async function resetPassword(email) {
 // ========================================
 // CLOUD DATA SYNC (FIRESTORE)
 // ========================================
+// ========================================
+// CLOUD DATA SYNC (FIRESTORE)
+// ========================================
 async function saveToCloud() {
     if (!currentUser || !db) {
-        console.log('Cannot save: User not signed in');
         return false;
     }
     
+    // PERFECTION: Ensure local gameData is absolutely fresh before saving
+    // This syncs activeModifiers and other realtime states into the gameData object
+    if (typeof window.saveGameData === 'function') {
+        window.saveGameData();
+    }
+    
     try {
+        // PERFECTION: Sanitize data (remove undefined values)
+        // Deep copy and strip undefined to prevent Firestore "Invalid Data" errors
+        const sanitize = (obj) => JSON.parse(JSON.stringify(obj));
+        
         const dataToSave = {
-            totalCoins: gameData.totalCoins,
-            highScore: gameData.highScore,
-            stats: gameData.stats,
-            ownedItems: gameData.ownedItems,
-            equippedItems: gameData.equippedItems,
-            achievements: gameData.achievements,
-            modifiers: activeModifiers, // Save unlocked modes
-            settings: gameData.settings || {},
+            totalCoins: gameData.totalCoins || 0,
+            highScore: gameData.highScore || 0,
+            stats: sanitize(gameData.stats || {}),
+            ownedItems: sanitize(gameData.ownedItems || {}),
+            equippedItems: sanitize(gameData.equippedItems || {}),
+            achievements: gameData.achievements || [],
+            modifiers: sanitize(gameData.modifiers || activeModifiers || {}),
+            settings: sanitize(gameData.settings || {}),
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
             lastDevice: navigator.userAgent.substring(0, 100)
         };
         
         await db.collection('users').doc(currentUser.uid).set(dataToSave, { merge: true });
-        console.log('☁️ Data saved to cloud');
+        console.log('☁️ Data saved to cloud successfully');
         showSyncIndicator('saved');
         return true;
     } catch (error) {
         console.error('Error saving to cloud:', error);
-        showSyncIndicator('error');
+        
+        // Critical: Tell user if permissions are the problem
+        if (error.code === 'permission-denied') {
+            showAuthError('Sync Failed: Permission Denied. Check SETUP_INSTRUCTIONS.md');
+        } else {
+            showSyncIndicator('error');
+        }
         return false;
     }
 }
 
 async function loadCloudData() {
-    if (!currentUser || !db) {
-        console.log('Cannot load: User not signed in');
-        return null;
-    }
+    if (!currentUser || !db) return null;
     
     try {
         const doc = await db.collection('users').doc(currentUser.uid).get();
@@ -241,6 +256,9 @@ async function loadCloudData() {
         return null;
     } catch (error) {
         console.error('Error loading from cloud:', error);
+        if (error.code === 'permission-denied') {
+            showAuthError('Sync Failed: Permission Denied. Check Rules.');
+        }
         return null;
     }
 }
@@ -330,6 +348,7 @@ function updateAuthUI(isSignedIn, user) {
     const userProfile = document.getElementById('user-profile');
     const userDisplayName = document.getElementById('user-display-name');
     const userAvatar = document.getElementById('user-avatar');
+    const accountSettingsRow = document.getElementById('account-settings-row');
     
     if (isSignedIn && user) {
         if (signInBtn) signInBtn.style.display = 'none';
@@ -343,9 +362,13 @@ function updateAuthUI(isSignedIn, user) {
                 userAvatar.style.display = 'none';
             }
         }
+        // Show account settings row
+        if (accountSettingsRow) accountSettingsRow.style.display = 'flex';
     } else {
         if (signInBtn) signInBtn.style.display = 'flex';
         if (userProfile) userProfile.style.display = 'none';
+        // Hide account settings row
+        if (accountSettingsRow) accountSettingsRow.style.display = 'none';
     }
 }
 
@@ -428,6 +451,90 @@ function showSyncIndicator(status) {
     }
 }
 
+// ========================================
+// DELETE ACCOUNT LOGIC
+// ========================================
+function showDeleteAccountModal() {
+    const modal = document.getElementById('delete-account-modal');
+    const passwordGroup = document.getElementById('delete-password-group');
+    const googleText = document.getElementById('delete-google-text');
+    const errorEl = document.getElementById('delete-error');
+    
+    if (modal) modal.classList.remove('hidden');
+    if (errorEl) errorEl.style.display = 'none';
+    
+    // Check if user signed in with Google
+    const isGoogle = currentUser && currentUser.providerData.some(p => p.providerId === 'google.com');
+    
+    if (isGoogle) {
+        if (passwordGroup) passwordGroup.style.display = 'none';
+        if (googleText) googleText.style.display = 'block';
+    } else {
+        if (passwordGroup) passwordGroup.style.display = 'block';
+        if (googleText) googleText.style.display = 'none';
+    }
+}
+
+function hideDeleteAccountModal() {
+    const modal = document.getElementById('delete-account-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function handleDeleteAccount(event) {
+    event.preventDefault();
+    if (!currentUser) return;
+    
+    const password = document.getElementById('delete-password').value;
+    const errorEl = document.getElementById('delete-error');
+    const loadingEl = document.getElementById('delete-loading');
+    const isGoogle = currentUser.providerData.some(p => p.providerId === 'google.com');
+    
+    // Reset error
+    if (errorEl) errorEl.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'flex';
+    
+    try {
+        let credential;
+        
+        // 1. Re-authenticate
+        if (isGoogle) {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            // Need to use popup for re-auth
+            await currentUser.reauthenticateWithPopup(provider);
+        } else {
+            if (!password) {
+                throw new Error('Please enter your password.');
+            }
+            credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+            await currentUser.reauthenticateWithCredential(credential);
+        }
+        
+        // 2. Delete Firestore Data
+        if (db) {
+            await db.collection('users').doc(currentUser.uid).delete();
+        }
+        
+        // 3. Delete Auth Account
+        await currentUser.delete();
+        
+        // 4. Cleanup
+        localStorage.removeItem('asteroidBlasterData'); // Optional: clear local data too if desired
+        hideDeleteAccountModal();
+        showAuthNotification('Account deleted. Goodbye! 👋', 'info');
+        
+        // Reload page to reset game state fully
+        setTimeout(() => window.location.reload(), 1500);
+        
+    } catch (error) {
+        console.error('Delete account error:', error);
+        if (errorEl) {
+            errorEl.textContent = getAuthErrorMessage(error.code) || error.message;
+            errorEl.style.display = 'block';
+        }
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
+}
+
 function getAuthErrorMessage(code) {
     const messages = {
         'auth/email-already-in-use': 'This email is already registered. Try signing in instead.',
@@ -440,7 +547,9 @@ function getAuthErrorMessage(code) {
         'auth/too-many-requests': 'Too many attempts. Please try again later.',
         'auth/popup-closed-by-user': 'Sign-in popup was closed.',
         'auth/network-request-failed': 'Network error. Check your connection.',
-        'auth/operation-not-supported-in-this-environment': 'Please run the game from a local web server (see instructions above).'
+        'auth/operation-not-supported-in-this-environment': 'Please run the game from a local web server (see instructions above).',
+        'permission-denied': 'Database access denied. Please update Firebase Rules (see SETUP_INSTRUCTIONS.md).',
+        'auth/requires-recent-login': 'Please sign in again to perform this action.'
     };
     return messages[code] || 'An error occurred. Please try again.';
 }

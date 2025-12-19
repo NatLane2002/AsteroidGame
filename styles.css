@@ -2853,3 +2853,50 @@ body.is-mobile .mobile-only {
     color: rgba(255, 255, 255, 0.6);
     font-size: 0.8rem;
 }
+
+/* Delete Account / Danger UI Styles */
+.game-button.danger {
+    border-color: #ff4444;
+    color: #ff8888;
+    background: rgba(40, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+.game-button.danger:hover {
+    background: rgba(255, 68, 68, 0.2);
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+    color: #ffaaaa;
+}
+
+.auth-submit-btn.danger {
+    background: linear-gradient(135deg, #cc2222 0%, #990000 100%);
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+}
+
+.auth-submit-btn.danger:hover {
+    background: linear-gradient(135deg, #ee4444 0%, #bb0000 100%);
+    box-shadow: 0 0 25px rgba(255, 0, 0, 0.5);
+}
+
+.auth-submit-btn.secondary {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: none;
+    color: #aaa;
+}
+
+.auth-submit-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: none;
+}
+
+.auth-modal-content.danger-theme {
+    border: 1px solid #ff4444;
+    box-shadow: 0 0 50px rgba(255, 0, 0, 0.15);
+}
+
+.auth-modal-content.danger-theme .auth-icon {
+    background: rgba(255, 0, 0, 0.1);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.2);
+}

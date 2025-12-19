@@ -549,6 +549,14 @@
                             <span id="zoom-value" class="volume-value">Medium</span>
                         </div>
                     </div>
+                    
+                    <!-- Account Settings (Only visible when logged in) -->
+                    <div class="setting-row" id="account-settings-row" style="display:none; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-top: 15px;">
+                        <span class="setting-label">👤 Account</span>
+                        <button id="delete-account-open-btn" class="game-button danger" style="font-size: 0.8rem; padding: 8px 15px; background: rgba(255, 68, 68, 0.2); border-color: #ff4444; color: #ff8888;" onclick="showDeleteAccountModal()">
+                            <span>DELETE ACCOUNT</span>
+                        </button>
+                    </div>
                 </div>
                 <button id="settings-close-button" class="game-button secondary">
                     <span>← BACK TO MENU</span>
@@ -598,7 +606,124 @@
                     </div>
                     
                     <button type="submit" class="auth-submit-btn">
-                        <span>🔓 Sign In</span>
+                        <span>Sign In</span>
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Sign Up Form -->
+            <div id="signup-form" class="auth-form" style="display: none;">
+                <div class="auth-header">
+                    <div class="auth-icon">✨</div>
+                    <h2>Join the Fleet</h2>
+                    <p>Create an account to save your stats</p>
+                </div>
+                
+                <form onsubmit="handleSignUp(event)">
+                    <div class="auth-input-group">
+                        <label for="signup-name">Pilot Name</label>
+                        <input type="text" id="signup-name" placeholder="SpaceAce" required maxlength="15">
+                    </div>
+                    <div class="auth-input-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" placeholder="captain@space.com" required>
+                    </div>
+                    <div class="auth-input-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" placeholder="••••••••" required minlength="6">
+                    </div>
+                    <div class="auth-input-group">
+                        <label for="signup-confirm-password">Confirm Password</label>
+                        <input type="password" id="signup-confirm-password" placeholder="••••••••" required minlength="6">
+                    </div>
+                    
+                    <button type="submit" class="auth-submit-btn">
+                        <span>Sign Up</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Reset Password Form -->
+            <div id="reset-form" class="auth-form" style="display: none;">
+                <div class="auth-header">
+                    <div class="auth-icon">🔑</div>
+                    <h2>Reset Password</h2>
+                    <p>We'll send you a recovery link</p>
+                </div>
+                
+                <form onsubmit="handlePasswordReset(event)">
+                    <div class="auth-input-group">
+                        <label for="reset-email">Email</label>
+                        <input type="email" id="reset-email" placeholder="captain@space.com" required>
+                    </div>
+                    
+                    <button type="submit" class="auth-submit-btn">
+                        <span>Send Reset Link</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Auth Error Message -->
+            <div id="auth-error" class="auth-message error" style="display: none;"></div>
+            
+            <!-- Auth Loading -->
+            <div id="auth-loading" class="auth-loading" style="display: none;">
+                <div class="spinner"></div>
+                <span>Connecting to Database...</span>
+            </div>
+
+            <div class="auth-footer">
+                <p id="signin-footer">New recruit? <a href="#" onclick="switchAuthForm('signup')">Create Account</a></p>
+                <p id="signup-footer" style="display: none;">Already have an account? <a href="#" onclick="switchAuthForm('signin')">Sign In</a></p>
+                <p id="reset-footer" style="display: none;"><a href="#" onclick="switchAuthForm('signin')">Back to Sign In</a></p>
+                <p id="forgot-password-link"><a href="#" onclick="switchAuthForm('reset')">Forgot Password?</a></p>
+            </div>
+
+            <div class="auth-divider">
+                <span>OR</span>
+            </div>
+
+            <button type="button" class="google-btn" onclick="signInWithGoogle()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                <span>Sign in with Google</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Delete Account Modal -->
+    <div id="delete-account-modal" class="overlay auth-overlay hidden">
+        <div class="auth-modal-content danger-theme" style="border-color: #ff4444;">
+            <button class="auth-close-btn" onclick="hideDeleteAccountModal()">✕</button>
+            <div class="auth-header">
+                <div class="auth-icon">⚠️</div>
+                <h2 style="color: #ff4444;">Delete Account</h2>
+                <p>This action is PERMANENT. All progress, coins, and items will be lost forever.</p>
+            </div>
+            
+            <form onsubmit="handleDeleteAccount(event)">
+                <div class="auth-input-group" id="delete-password-group">
+                    <label for="delete-password">Confirm Password</label>
+                    <input type="password" id="delete-password" placeholder="Enter your password to confirm">
+                </div>
+                
+                <p class="auth-helper-text" id="delete-google-text" style="display:none; color: #ffaaaa; margin-bottom: 15px; font-size: 0.9rem;">
+                    You will be asked to sign in with Google again to verify ownership.
+                </p>
+                
+                <div id="delete-error" class="auth-message error" style="display: none;"></div>
+                
+                <div id="delete-loading" class="auth-loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>Deleting Account...</span>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="auth-submit-btn secondary" onclick="hideDeleteAccountModal()">CANCEL</button>
+                    <button type="submit" class="auth-submit-btn danger" style="background: linear-gradient(135deg, #cc2222 0%, #990000 100%);">DELETE FOREVER</button>
+                </div>
+            </form>
+        </div>
+    </div>                        <span>🔓 Sign In</span>
                     </button>
                 </form>
                 
