@@ -401,6 +401,7 @@ const SHOP_ITEMS = {
 // ========================================
 function resizeCanvas() { 
     isMobile = detectMobile();
+    document.body.classList.toggle('is-mobile', isMobile);
     
     if (isMobile) {
         // PERFECTION: SIGNIFICANTLY zoomed out for mobile - user defined target width
@@ -2512,11 +2513,10 @@ document.getElementById('settings-button').addEventListener('click', () => {
     hideOverlay('start-screen');
     showOverlay('settings-screen');
     
-    // Sync zoom slider
-    if (zoomSlider && gameData.settings?.mobileZoom) {
-        zoomSlider.value = gameData.settings.mobileZoom;
-        zoomValueLabel.textContent = getZoomLevelName(gameData.settings.mobileZoom);
-    }
+    // Sync zoom slider labels and value
+    const zoomVal = gameData.settings?.mobileZoom || 1800;
+    if (zoomSlider) zoomSlider.value = zoomVal;
+    if (zoomValueLabel) zoomValueLabel.textContent = getZoomLevelName(zoomVal);
 });
 document.getElementById('settings-close-button').addEventListener('click', () => {
     hideOverlay('settings-screen');
