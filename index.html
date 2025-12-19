@@ -2,25 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Asteroid Blaster - A classic arcade-style asteroid shooter game with modern graphics, cat alien bosses, and customization shop">
-    <title>Asteroid Blaster - Space Shooter Game</title>
+    <title>Cosmic Cats</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐱</text></svg>">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-stars"></div>
+        <div class="loading-content">
+            <div class="loading-rocket">🚀</div>
+            <h1 class="loading-title"><span>COSMIC CATS</span></h1>
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+            <p class="loading-text">LOADING...</p>
+        </div>
+    </div>
+
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         
         <!-- HUD Overlay - Reorganized Layout -->
         <div id="hud">
-            <!-- Top Left: Score Only -->
+            <!-- Top Left: Score + Combo -->
             <div id="top-left-hud">
                 <div id="score-container" class="hud-box">
                     <span class="hud-label">SCORE</span>
                     <span id="score" class="hud-value">0</span>
+                </div>
+                <div id="combo-container" class="hud-box combo-box hidden">
+                    <span id="combo-count" class="combo-count">0</span>
+                    <span class="combo-label">COMBO</span>
+                    <span id="combo-mult" class="combo-mult">x1</span>
                 </div>
             </div>
 
@@ -85,20 +104,26 @@
                 <h1 class="game-title">ASTEROID<br><span class="accent">BLASTER</span></h1>
                 <div class="title-decoration"></div>
                 <p class="subtitle">Navigate through the asteroid field and defeat the Cat Aliens!</p>
-                <div class="controls-info">
-                    <div class="control-row">
-                        <span class="key">W</span> or <span class="key">↑</span>
-                        <span>Thrust</span>
-                    </div>
-                    <div class="control-row">
-                        <span class="key">A</span><span class="key">D</span> or <span class="key">←</span><span class="key">→</span>
-                        <span>Rotate</span>
-                    </div>
-                    <div class="control-row">
-                        <span class="key">SPACE</span>
-                        <span>Fire</span>
+                
+                <!-- Liberty Easter Egg Tooltip -->
+                <div class="liberty-tooltip-container">
+                    <div class="liberty-icon" title="Reveal Secret">ℹ️</div>
+                    <div class="liberty-message">
+                         <div class="liberty-heading">Secret</div>
+                         <div class="liberty-text">Made for Liberty!</div>
                     </div>
                 </div>
+
+                <!-- High Score Display -->
+                <div class="highscore-display-main">
+                    <div class="highscore-trophy">🏆</div>
+                    <div class="highscore-content">
+                        <span class="highscore-label">HIGH SCORE</span>
+                        <span class="highscore-value" id="menu-highscore">0</span>
+                    </div>
+                    <div class="highscore-trophy">🏆</div>
+                </div>
+                
                 <div class="menu-buttons">
                     <button id="start-button" class="game-button">
                         <span>START GAME</span>
@@ -108,11 +133,119 @@
                         <span>🛒 SHOP</span>
                     </button>
                 </div>
+
+                <div class="modifiers-section-container">
+                    <button id="mods-button" class="modifier-toggle-btn">
+                        <span>⚡ MODIFIERS</span>
+                    </button>
+                    <div class="modifiers-spacer"></div>
+                </div>
+
                 <div class="wallet-display">
                     <span class="wallet-label">Your Coins:</span>
                     <span class="wallet-coins">🪙 <span id="wallet-coins">0</span></span>
                 </div>
-                <p class="hint">Collect power-ups and defeat Cat Alien bosses each level!</p>
+                
+
+                <div class="menu-secondary-buttons">
+                    <button id="achievements-button" class="icon-button" title="Achievements">
+                        <span class="icon-btn-emoji">🏆</span>
+                        <span class="icon-btn-text">AWARDS</span>
+                    </button>
+                    <button id="stats-button" class="icon-button" title="View Stats">
+                        <span class="icon-btn-emoji">📊</span>
+                        <span class="icon-btn-text">STATS</span>
+                    </button>
+                    <button id="guide-button" class="icon-button" title="How to Play">
+                        <span class="icon-btn-emoji">❓</span>
+                        <span class="icon-btn-text">GUIDE</span>
+                    </button>
+                    <button id="settings-button" class="icon-button" title="Settings">
+                        <span class="icon-btn-emoji">⚙️</span>
+                        <span class="icon-btn-text">SOUND</span>
+                    </button>
+                    <!-- Fullscreen button removed as requested -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Guide Screen -->
+        <div id="guide-screen" class="overlay hidden">
+            <div class="overlay-content guide-content">
+                <h2 class="overlay-title">HOW TO PLAY</h2>
+                <div class="controls-info-large">
+                    <div class="control-group">
+                        <h3>KEYBOARD</h3>
+                        <div class="control-row"><span class="key">W</span> / <span class="key">↑</span> <span>Thrust</span></div>
+                        <div class="control-row"><span class="key">A</span> / <span class="key">←</span> <span>Rotate Left</span></div>
+                        <div class="control-row"><span class="key">D</span> / <span class="key">→</span> <span>Rotate Right</span></div>
+                        <div class="control-row"><span class="key">SPACE</span> <span>Fire</span></div>
+                    </div>
+                    <div class="control-group">
+                        <h3>MOBILE</h3>
+                        <p>Use the on-screen Joystick to move and Rotate.</p>
+                        <p>Tap the Red Button to Fire.</p>
+                    </div>
+                </div>
+                <button class="game-button secondary back-button" onclick="showOverlay('start-screen'); hideOverlay('guide-screen')">
+                    <span>← BACK TO MENU</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Achievements Screen -->
+        <div id="achievements-screen" class="overlay hidden">
+            <div class="overlay-content achievements-content">
+                <h2 class="overlay-title">HALL OF FAME</h2>
+                <div id="achievements-grid" class="achievements-grid">
+                    <!-- Achievements injected here -->
+                </div>
+                <button class="game-button secondary back-button" onclick="showOverlay('start-screen'); hideOverlay('achievements-screen')">
+                    <span>← BACK TO MENU</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modifiers Screen -->
+        <div id="modifiers-screen" class="overlay hidden">
+            <div class="overlay-content modifiers-content">
+                <h2 class="overlay-title">GAME MODIFIERS</h2>
+                <p class="modifiers-desc">Stack modifiers for unique gameplay challenges!</p>
+                
+                <div class="current-modifiers-status">
+                    <span>COIN DROP RATE: <strong id="mod-coin-rate">100%</strong></span>
+                    <div class="mod-warning hidden" id="mod-score-warning">⚠️ High Scores & Achievements DISABLED</div>
+                </div>
+
+                <div class="modifiers-grid">
+                    <div class="modifier-card" id="mod-fast">
+                        <div class="mod-icon">⚡</div>
+                        <h3>FAST MODE</h3>
+                        <p>Ship moves 2x faster.</p>
+                        <button class="mod-toggle" onclick="toggleModifier('fastMode')">DISABLED</button>
+                    </div>
+                    <div class="modifier-card" id="mod-immortal">
+                        <div class="mod-icon">🛡️</div>
+                        <h3>IMMORTAL</h3>
+                        <p>Infinite Lives.<br><span class="penalty">Coins: 33%</span></p>
+                        <button class="mod-toggle" onclick="toggleModifier('immortalMode')">DISABLED</button>
+                    </div>
+                    <div class="modifier-card" id="mod-slow">
+                        <div class="mod-icon">🐌</div>
+                        <h3>SLOW MODE</h3>
+                        <p>Enemies slowed.<br><span class="penalty">Coins: 50%</span></p>
+                        <button class="mod-toggle" onclick="toggleModifier('slowMode')">DISABLED</button>
+                    </div>
+                    <div class="modifier-card" id="mod-nightmare">
+                        <div class="mod-icon">😈</div>
+                        <h3>NIGHTMARE</h3>
+                        <p>Enemies 1.5x speed.<br>Asteroids 2x spawn.<br><span class="bonus">Coins: 300%</span></p>
+                        <button class="mod-toggle" onclick="toggleModifier('nightmareMode')">DISABLED</button>
+                    </div>
+                </div>
+                <button class="game-button secondary back-button" onclick="showOverlay('start-screen'); hideOverlay('modifiers-screen')">
+                    <span>← BACK TO MENU</span>
+                </button>
             </div>
         </div>
 
@@ -149,6 +282,25 @@
             </div>
         </div>
 
+        <!-- Shop Confirmation Modal -->
+        <div id="shop-confirm-modal" class="overlay hidden" style="z-index: 2000;">
+            <div class="overlay-content confirm-content">
+                <h2 class="confirm-title">CONFIRM</h2>
+                <div class="confirm-item-preview">
+                     <div id="confirm-icon"></div>
+                </div>
+                <p id="confirm-message" class="confirm-message">Purchase this item?</p>
+                <div class="confirm-price-container" id="confirm-price-box">
+                     <span class="confirm-price-label">PRICE:</span>
+                     <span id="confirm-price-value" class="confirm-price">🪙 100</span>
+                </div>
+                <div class="menu-buttons horizontal-buttons">
+                    <button id="confirm-yes" class="game-button">CONFIRM</button>
+                    <button id="confirm-no" class="game-button secondary">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Pause Screen -->
         <div id="pause-screen" class="overlay hidden">
             <div class="overlay-content">
@@ -162,7 +314,7 @@
                         <span>RESTART</span>
                     </button>
                     <button id="pause-home-button" class="game-button secondary">
-                        <span>Start Menu</span>
+                        <span>Main Menu</span>
                     </button>
                 </div>
             </div>
@@ -203,7 +355,7 @@
                         <div class="button-glow"></div>
                     </button>
                     <button id="gameover-home-button" class="game-button secondary">
-                        <span>Start Menu</span>
+                        <span>Main Menu</span>
                     </button>
                 </div>
             </div>
@@ -219,9 +371,102 @@
             <span class="notification-text boss-text">🐱 CAT ALIENS INCOMING! 🐱</span>
         </div>
 
+        <!-- Cheat Notification -->
+        <div id="cheat-warning-notification" class="notification boss-notification hidden">
+            <span class="notification-text boss-text" style="font-size: 1.5rem !important;">⚠️ CHEAT MODE ACTIVE: NO SCORES! ⚠️</span>
+        </div>
+
         <!-- Wave Clear Notification -->
         <div id="wave-clear-notification" class="notification wave-clear-notification hidden">
             <span class="notification-text wave-clear-text">WAVE CLEARED!</span>
+        </div>
+
+        <!-- Stats Screen -->
+        <div id="stats-screen" class="overlay hidden">
+            <div class="overlay-content stats-content">
+                <h2 class="stats-title">📊 YOUR STATS</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-card-value" id="stat-highscore">0</span>
+                        <span class="stat-card-label">🏆 Best Score</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-card-value" id="stat-coins">0</span>
+                        <span class="stat-card-label">🪙 Total Coins</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-card-value" id="stat-games">0</span>
+                        <span class="stat-card-label">🎮 Games Played</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-card-value" id="stat-asteroids">0</span>
+                        <span class="stat-card-label">☄️ Asteroids Destroyed</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-card-value" id="stat-aliens">0</span>
+                        <span class="stat-card-label">🐱 Cat Aliens Defeated</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-card-value" id="stat-space-pirates">0</span>
+                        <span class="stat-card-label">☠️ Pirates Defeated</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-card-value" id="stat-total-coins">0</span>
+                        <span class="stat-card-label">💰 Lifetime Coins</span>
+                    </div>
+                </div>
+                <button id="stats-close-button" class="game-button secondary">
+                    <span>← BACK TO MENU</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Screen -->
+        <div id="settings-screen" class="overlay hidden">
+            <div class="overlay-content settings-content">
+                <h2 class="settings-title">⚙️ SOUND SETTINGS</h2>
+                <div class="settings-container">
+                    <div class="setting-row">
+                        <span class="setting-label">🔊 Master Volume</span>
+                        <div class="volume-control">
+                            <input type="range" id="volume-slider" min="0" max="100" value="70" class="volume-slider">
+                            <span id="volume-value" class="volume-value">70%</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">🔇 Mute All Sounds</span>
+                        <button id="mute-toggle" class="toggle-button">
+                            <span class="toggle-text" id="mute-text">OFF</span>
+                        </button>
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">🎵 Sound Effects</span>
+                        <button id="sfx-toggle" class="toggle-button active">
+                            <span class="toggle-text" id="sfx-text">ON</span>
+                        </button>
+                    </div>
+                </div>
+                <button id="settings-close-button" class="game-button secondary">
+                    <span>← BACK TO MENU</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Touch Controls -->
+        <div id="mobile-controls" class="mobile-controls hidden">
+            <!-- Left side: Joystick for movement -->
+            <div id="joystick-container" class="joystick-container">
+                <div id="joystick-base" class="joystick-base">
+                    <div id="joystick-stick" class="joystick-stick"></div>
+                </div>
+            </div>
+            <!-- Right side: Fire button -->
+            <div id="fire-button-container" class="fire-button-container">
+                <button id="mobile-fire-button" class="mobile-fire-button">
+                    <span>🔥</span>
+                    <span class="fire-label">FIRE</span>
+                </button>
+            </div>
         </div>
     </div>
 
