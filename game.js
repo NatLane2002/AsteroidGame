@@ -39,7 +39,7 @@ let rightMouseDown = false; // Right mouse button (thrust in mouse-only mode)
 
 // Game Objects
 let ship = null, bullets = [], asteroids = [], particles = [], powerups = [], stars = [];
-let catAliens = [], spacePirates = [], alienBullets = [], coinItems = [];
+let catAliens = [], spacePirates = [], cosmicJellyfish = [], alienBullets = [], coinItems = [];
 let bossPhase = false, bossWaveComplete = false;
 
 // Notification Queue System
@@ -60,7 +60,8 @@ let activeModifiers = {
     fastMode: false,      // Ship moves 2x speed
     immortalMode: false,  // Never die, coins at 33% (CHEAT)
     slowMode: false,      // Enemies slowed, coins at 50% (CHEAT)
-    nightmareMode: false  // Enemies 1.5x speed, Asteroids 2x spawn, Coins 300%
+    nightmareMode: false, // Enemies 1.5x speed, Asteroids 2x spawn, Coins 300%
+    largeMode: false      // Ship 2x size, Coins 150%
 };
 
 function hasCheatModifiers() {
@@ -76,6 +77,7 @@ function getModifierCoinMultiplier() {
     let mult = 1;
     if (activeModifiers.slowMode) mult *= 0.5;
     if (activeModifiers.nightmareMode) mult *= 3.0;
+    if (activeModifiers.largeMode) mult *= 1.5; // Large Mode: 150% coin drop
     return mult;
 }
 
@@ -90,6 +92,10 @@ function getModifierEnemySpeed() {
     return speed;
 }
 
+function getShipSizeMultiplier() {
+    return activeModifiers.largeMode ? 2 : 1;
+}
+
 // Constants
 const SHIP_SIZE = 20, SHIP_THRUST = 300, SHIP_FRICTION = 0.99, SHIP_ROTATION_SPEED = 4;
 const SHIP_INVULNERABILITY_TIME = 3000;
@@ -98,7 +104,7 @@ const ASTEROID_SPEED_BASE = 50, ASTEROID_SPEED_VARIANCE = 30;
 const ASTEROID_SIZES = { large: { radius: 50, points: 20 }, medium: { radius: 30, points: 50 }, small: { radius: 15, points: 100 } };
 const POWERUP_DURATION = 12000;
 const TIMESLOW_DURATION = 10000; // Time Slow only lasts 10 seconds
-const POWERUP_SPAWN_CHANCE_PER_TYPE = 0.03; // 3% per powerup type
+const POWERUP_SPAWN_CHANCE_PER_TYPE = 0.0291; // ~2.91% per powerup type (decreased by 3%)
 
 // ========================================
 // DATA PERSISTENCE
@@ -496,10 +502,26 @@ class Ship {
         this.magnetActive = false; this.magnetTime = 0;
         this.timeSlowActive = false; this.timeSlowTime = 0;
         this.piercingActive = false; this.piercingTime = 0;
+        // New powerups
+        this.tripleShotActive = false; this.tripleShotTime = 0;
+        this.largeBulletsActive = false; this.largeBulletsTime = 0;
+        this.blastRadiusActive = false; this.blastRadiusTime = 0;
         this.visible = true; this.blinkTimer = 0;
         // Idle animation
         this.idleBobPhase = 0;
         this.idleRotationPhase = 0;
+    }
+    // Reset position only - PRESERVES all active powerups!
+    resetPosition() {
+        this.x = canvas.width / 2; this.y = canvas.height / 2;
+        this.vx = 0; this.vy = 0; this.angle = -Math.PI / 2;
+        this.thrusting = false; this.lastFireTime = 0;
+        this.invulnerable = true; this.invulnerableTime = SHIP_INVULNERABILITY_TIME;
+        this.visible = true; this.blinkTimer = 0;
+        // Idle animation reset
+        this.idleBobPhase = 0;
+        this.idleRotationPhase = 0;
+        // NOTE: All powerup states (shieldActive, rapidFireActive, etc.) are PRESERVED
     }
     update(dt) {
         // Time slow affects everything except the ship
@@ -518,6 +540,10 @@ class Ship {
         if (this.magnetActive) { this.magnetTime -= dt * 1000; if (this.magnetTime <= 0) this.magnetActive = false; updatePowerupIndicator('magnet', this.magnetTime, POWERUP_DURATION); }
         if (this.timeSlowActive) { this.timeSlowTime -= dt * 1000; if (this.timeSlowTime <= 0) this.timeSlowActive = false; updatePowerupIndicator('timeslow', this.timeSlowTime, TIMESLOW_DURATION); }
         if (this.piercingActive) { this.piercingTime -= dt * 1000; if (this.piercingTime <= 0) this.piercingActive = false; updatePowerupIndicator('piercing', this.piercingTime, POWERUP_DURATION); }
+        // New powerups
+        if (this.tripleShotActive) { this.tripleShotTime -= dt * 1000; if (this.tripleShotTime <= 0) this.tripleShotActive = false; updatePowerupIndicator('tripleshot', this.tripleShotTime, POWERUP_DURATION); }
+        if (this.largeBulletsActive) { this.largeBulletsTime -= dt * 1000; if (this.largeBulletsTime <= 0) this.largeBulletsActive = false; updatePowerupIndicator('largebullets', this.largeBulletsTime, POWERUP_DURATION); }
+        if (this.blastRadiusActive) { this.blastRadiusTime -= dt * 1000; if (this.blastRadiusTime <= 0) this.blastRadiusActive = false; updatePowerupIndicator('blastradius', this.blastRadiusTime, POWERUP_DURATION); }
         
         // Control scheme handling
         const controlScheme = gameData.settings?.controlScheme || 'keyboard';
@@ -611,15 +637,25 @@ class Ship {
         soundManager.playShoot();
         const bx = this.x + Math.cos(this.angle) * SHIP_SIZE;
         const by = this.y + Math.sin(this.angle) * SHIP_SIZE;
-        bullets.push(new Bullet(bx, by, this.angle, true, this.piercingActive));
-        if (this.shieldActive) {
-            bullets.push(new Bullet(bx, by, this.angle - 0.2, true, this.piercingActive));
-            bullets.push(new Bullet(bx, by, this.angle + 0.2, true, this.piercingActive));
+        // Create bullet with new properties
+        const createBullet = (angle) => {
+            const b = new Bullet(bx, by, angle, true, this.piercingActive);
+            b.large = this.largeBulletsActive; // Large bullets powerup
+            b.hasBlastRadius = this.blastRadiusActive; // Blast radius powerup
+            if (b.large) b.radius = this.piercingActive ? 8 : 6; // Larger radius
+            return b;
+        };
+        bullets.push(createBullet(this.angle));
+        // Triple shot is now separate from shield - fires 3 bullets in a spread
+        if (this.tripleShotActive) {
+            bullets.push(createBullet(this.angle - 0.2));
+            bullets.push(createBullet(this.angle + 0.2));
         }
     }
     draw() {
         if (!this.visible) return;
         const skin = getEquippedSkin();
+        const sizeMultiplier = getShipSizeMultiplier();
         
         // Calculate idle animation offsets
         const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
@@ -630,11 +666,24 @@ class Ship {
         ctx.save();
         ctx.translate(this.x, this.y + bobOffset);
         ctx.rotate(this.angle + rotOffset);
+        ctx.scale(sizeMultiplier, sizeMultiplier); // Apply Large Mode size scaling
         
         if (this.shieldActive || this.invulnerable) {
+            // Shield flashes when about to expire (last 3 seconds)
+            let shieldOpacity = this.shieldActive ? 0.3 : 0.15;
+            let strokeOpacity = 0.5;
+            
+            if (this.shieldActive && this.shieldTime <= 3000) {
+                // Fast flashing effect - oscillates between 0.1 and 0.5 opacity
+                const flashSpeed = 10; // Flashes per second
+                const flash = Math.sin(Date.now() / 1000 * flashSpeed * Math.PI * 2) * 0.5 + 0.5;
+                shieldOpacity = 0.1 + flash * 0.4; // Range: 0.1 to 0.5
+                strokeOpacity = 0.2 + flash * 0.6; // Range: 0.2 to 0.8
+            }
+            
             ctx.beginPath(); ctx.arc(0, 0, SHIP_SIZE + 10, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(0, 240, 255, ${this.shieldActive ? 0.3 : 0.15})`;
-            ctx.fill(); ctx.strokeStyle = `rgba(0, 240, 255, 0.5)`; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = `rgba(0, 240, 255, ${shieldOpacity})`;
+            ctx.fill(); ctx.strokeStyle = `rgba(0, 240, 255, ${strokeOpacity})`; ctx.lineWidth = 2; ctx.stroke();
         }
         
         ctx.beginPath();
@@ -721,7 +770,7 @@ class Ship {
             ctx.restore();
         }
     }
-    isCollidingWith(obj) { return !(this.invulnerable || this.shieldActive) && distance(this.x, this.y, obj.x, obj.y) < SHIP_SIZE + obj.radius; }
+    isCollidingWith(obj) { return !(this.invulnerable || this.shieldActive) && distance(this.x, this.y, obj.x, obj.y) < (SHIP_SIZE * getShipSizeMultiplier()) + obj.radius; }
     activateShield() {
         const wasActive = this.shieldActive;
         this.shieldActive = true;
@@ -752,6 +801,24 @@ class Ship {
         this.piercingTime = wasActive ? this.piercingTime + POWERUP_DURATION : POWERUP_DURATION;
         showPowerupIndicator('piercing', wasActive);
     }
+    activateTripleShot() {
+        const wasActive = this.tripleShotActive;
+        this.tripleShotActive = true;
+        this.tripleShotTime = wasActive ? this.tripleShotTime + POWERUP_DURATION : POWERUP_DURATION;
+        showPowerupIndicator('tripleshot', wasActive);
+    }
+    activateLargeBullets() {
+        const wasActive = this.largeBulletsActive;
+        this.largeBulletsActive = true;
+        this.largeBulletsTime = wasActive ? this.largeBulletsTime + POWERUP_DURATION : POWERUP_DURATION;
+        showPowerupIndicator('largebullets', wasActive);
+    }
+    activateBlastRadius() {
+        const wasActive = this.blastRadiusActive;
+        this.blastRadiusActive = true;
+        this.blastRadiusTime = wasActive ? this.blastRadiusTime + POWERUP_DURATION : POWERUP_DURATION;
+        showPowerupIndicator('blastradius', wasActive);
+    }
 }
 
 // ========================================
@@ -765,11 +832,31 @@ class Bullet {
         this.createdAt = Date.now(); this.radius = piercing ? 5 : 3;
         this.hitCount = 0;
         this.trailTimer = 0;
+        this.wrapCount = 0; // Track screen wraps - bullets can only wrap ONCE
+        this.expired = false; // Flag for second wrap = explosion
     }
     update(dt) {
         this.x += this.vx * dt;
         this.y += this.vy * dt;
-        wrapPosition(this);
+        
+        // Custom wrap logic for bullets - only allow ONE wrap
+        let wrapped = false;
+        if (this.x < -50) { this.x = canvas.width + 50; wrapped = true; }
+        if (this.x > canvas.width + 50) { this.x = -50; wrapped = true; }
+        if (this.y < -50) { this.y = canvas.height + 50; wrapped = true; }
+        if (this.y > canvas.height + 50) { this.y = -50; wrapped = true; }
+        
+        if (wrapped) {
+            this.wrapCount++;
+            if (this.wrapCount >= 2) {
+                // Second wrap - bullet expires with small explosion effect
+                this.expired = true;
+                if (this.isPlayer) {
+                    particles.push(new Particle(this.x, this.y, '#00ffff', randomRange(-30, 30), randomRange(-30, 30), 200, 2));
+                    particles.push(new Particle(this.x, this.y, '#00ffff', randomRange(-30, 30), randomRange(-30, 30), 200, 2));
+                }
+            }
+        }
         
         // Spawn trail particles for premium bullets
         if (this.isPlayer) {
@@ -832,17 +919,40 @@ class Bullet {
             ctx.beginPath(); ctx.arc(0, 0, this.radius + 4, 0, Math.PI * 2);
             ctx.fillStyle = bullet.glow; ctx.fill();
             ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = this.piercing ? '#ffaa00' : bullet.color;
-            ctx.shadowColor = this.piercing ? '#ffaa00' : bullet.color;
-            ctx.shadowBlur = this.piercing ? 15 : 10; ctx.fill();
+            
+            // Determine bullet color based on active powerups
+            let bulletColor = bullet.color;
+            if (this.piercing) bulletColor = '#ffaa00';
+            else if (this.large) bulletColor = '#44ff88'; // Green for large bullets
+            else if (this.hasBlastRadius) bulletColor = '#ff6644'; // Orange-red for blast radius
+            
+            ctx.fillStyle = bulletColor;
+            ctx.shadowColor = bulletColor;
+            ctx.shadowBlur = this.piercing ? 15 : (this.large ? 18 : 10); 
+            ctx.fill();
+            
+            // Piercing effect ring
             if (this.piercing) {
                 ctx.beginPath(); ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2);
                 ctx.strokeStyle = 'rgba(255, 170, 0, 0.5)'; ctx.lineWidth = 2; ctx.stroke();
             }
+            
+            // Blast radius pulsing ring effect
+            if (this.hasBlastRadius) {
+                const pulse = Math.sin(Date.now() / 100) * 0.3 + 0.7;
+                ctx.beginPath(); ctx.arc(0, 0, this.radius + 5 * pulse, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255, 100, 68, ${0.4 * pulse})`; ctx.lineWidth = 2; ctx.stroke();
+            }
+            
+            // Large bullet outer glow
+            if (this.large) {
+                ctx.beginPath(); ctx.arc(0, 0, this.radius + 3, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(68, 255, 136, 0.4)'; ctx.lineWidth = 2; ctx.stroke();
+            }
         }
         ctx.restore();
     }
-    isExpired() { return Date.now() - this.createdAt > BULLET_LIFETIME || (this.piercing && this.hitCount >= 3); }
+    isExpired() { return this.expired || Date.now() - this.createdAt > BULLET_LIFETIME || (this.piercing && this.hitCount >= 3); }
     isCollidingWith(obj) { return distance(this.x, this.y, obj.x, obj.y) < this.radius + obj.radius; }
 }
 
@@ -1163,6 +1273,119 @@ class SpacePirate {
 }
 
 // ========================================
+// COSMIC JELLYFISH CLASS - NEW ENEMY TYPE
+// A beautiful, ethereal space creature that drifts in circular patterns
+// and fires slow-moving homing energy orbs
+// ========================================
+class CosmicJellyfish {
+    constructor(lvl) {
+        this.radius = 28;
+        this.health = 2 + Math.floor(lvl / 5);
+        this.maxHealth = this.health;
+        // Spawn from any edge
+        const side = randomInt(0, 3);
+        if (side === 0) { this.x = -50; this.y = randomRange(100, canvas.height - 100); }
+        else if (side === 1) { this.x = canvas.width + 50; this.y = randomRange(100, canvas.height - 100); }
+        else if (side === 2) { this.x = randomRange(100, canvas.width - 100); this.y = -50; }
+        else { this.x = randomRange(100, canvas.width - 100); this.y = canvas.height + 50; }
+        
+        this.speed = 25 + lvl * 2; // Slow drifting movement
+        this.angle = 0;
+        this.driftPhase = Math.random() * Math.PI * 2;
+        this.pulsePhase = 0;
+        this.tentaclePhase = 0;
+        this.shootCooldown = Math.max(2500, 5000 - lvl * 200);
+        this.lastShot = Date.now() + randomRange(0, 2000);
+    }
+    update(dt) {
+        if (!ship) return;
+        this.driftPhase += dt * 0.8;
+        this.pulsePhase += dt * 3;
+        this.tentaclePhase += dt * 4;
+        
+        // Drift in circular/looping patterns while generally moving toward player
+        const dx = ship.x - this.x, dy = ship.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        this.angle = Math.atan2(dy, dx);
+        
+        // Circular drift pattern
+        const driftX = Math.cos(this.driftPhase) * 40;
+        const driftY = Math.sin(this.driftPhase * 0.7) * 40;
+        
+        this.x += (dx / dist) * this.speed * dt + driftX * dt;
+        this.y += (dy / dist) * this.speed * dt + driftY * dt;
+        
+        // Fire slow homing orb
+        if (Date.now() - this.lastShot > this.shootCooldown && dist < 500) {
+            soundManager.playAlienShoot();
+            alienBullets.push(new Bullet(this.x, this.y + this.radius, this.angle, false));
+            this.lastShot = Date.now();
+        }
+    }
+    draw() {
+        const pulse = Math.sin(this.pulsePhase) * 0.15 + 1;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        
+        // Ethereal glow aura
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 1.5 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(100, 200, 255, 0.1)';
+        ctx.fill();
+        
+        // Tentacles (flowing behind/below)
+        ctx.strokeStyle = 'rgba(150, 100, 255, 0.6)';
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 6; i++) {
+            const tentacleAngle = (i / 6) * Math.PI - Math.PI / 2;
+            const wave = Math.sin(this.tentaclePhase + i) * 8;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(tentacleAngle) * this.radius * 0.5, this.radius * 0.3);
+            ctx.quadraticCurveTo(
+                Math.cos(tentacleAngle) * this.radius * 0.7 + wave,
+                this.radius * 0.8,
+                Math.cos(tentacleAngle) * this.radius * 0.4,
+                this.radius * 1.2 + Math.abs(wave)
+            );
+            ctx.stroke();
+        }
+        
+        // Jellyfish bell (dome shape)
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.radius * pulse, this.radius * 0.7 * pulse, 0, Math.PI, 0);
+        const bg = ctx.createRadialGradient(0, -5, 0, 0, 0, this.radius);
+        bg.addColorStop(0, 'rgba(200, 150, 255, 0.9)');
+        bg.addColorStop(0.5, 'rgba(100, 100, 255, 0.7)');
+        bg.addColorStop(1, 'rgba(50, 50, 150, 0.5)');
+        ctx.fillStyle = bg;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(200, 200, 255, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Inner glow spots (bioluminescence)
+        ctx.shadowColor = '#88ffff';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = 'rgba(150, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.arc(-this.radius * 0.3, -this.radius * 0.2, 3, 0, Math.PI * 2);
+        ctx.arc(this.radius * 0.3, -this.radius * 0.2, 3, 0, Math.PI * 2);
+        ctx.arc(0, -this.radius * 0.35, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Health bar
+        ctx.fillStyle = '#333';
+        ctx.fillRect(-18, -this.radius - 10, 36, 4);
+        ctx.fillStyle = '#88ffff';
+        ctx.fillRect(-18, -this.radius - 10, 36 * (this.health / this.maxHealth), 4);
+        
+        ctx.restore();
+    }
+    takeDamage() { this.health--; return this.health <= 0; }
+}
+
+// ========================================
 // COIN CLASS
 // ========================================
 class Coin {
@@ -1232,6 +1455,97 @@ function createExplosion(x, y, color, count = 20) {
     triggerScreenShake(shakeIntensity, 200);
 }
 
+// Blast Radius Powerup: Deals splash damage to nearby enemies and asteroids
+// Balanced: Small radius (50px) and doesn't instant-kill, just damages
+const BLAST_RADIUS = 60; // Slightly larger for better effect
+function triggerBlastRadius(x, y) {
+    // Visual effect - orange/red explosion ring
+    for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        particles.push(new Particle(x + Math.cos(a) * BLAST_RADIUS * 0.5, y + Math.sin(a) * BLAST_RADIUS * 0.5, 
+            '#ff6600', Math.cos(a) * 80, Math.sin(a) * 80, 300, 3));
+    }
+    triggerScreenShake(4, 150);
+    
+    // Damage nearby asteroids - use hit() method properly
+    for (let i = asteroids.length - 1; i >= 0; i--) {
+        const a = asteroids[i];
+        if (distance(x, y, a.x, a.y) < BLAST_RADIUS + a.radius) {
+            const destroyed = a.hit();
+            if (destroyed) {
+                createExplosion(a.x, a.y, a.type.colors[0], 10);
+                a.onDestroy();
+                asteroids.push(...a.split());
+                spawnCoin(a.x, a.y);
+                increaseCombo();
+                const comboMult = getComboMultiplier();
+                score += Math.floor(a.points * level * comboMult * 0.5); // Half points for splash damage
+                asteroidsDestroyed++;
+                asteroids.splice(i, 1);
+            } else {
+                createExplosion(a.x, a.y, '#ffffff', 3);
+            }
+        }
+    }
+    
+    // Damage nearby Cat Aliens
+    for (let i = catAliens.length - 1; i >= 0; i--) {
+        const alien = catAliens[i];
+        if (distance(x, y, alien.x, alien.y) < BLAST_RADIUS + alien.radius) {
+            if (alien.takeDamage()) {
+                createExplosion(alien.x, alien.y, '#aa44ff', 15);
+                for (let k = 0; k < 3; k++) spawnCoin(alien.x + randomRange(-20, 20), alien.y + randomRange(-20, 20));
+                increaseCombo();
+                const comboMult = getComboMultiplier();
+                score += Math.floor(300 * level * comboMult); // Reduced points for splash kill
+                aliensDestroyed++;
+                catAliens.splice(i, 1);
+            } else {
+                createExplosion(alien.x, alien.y, '#ffffff', 3);
+            }
+        }
+    }
+    
+    // Damage nearby Space Pirates
+    for (let i = spacePirates.length - 1; i >= 0; i--) {
+        const pirate = spacePirates[i];
+        if (distance(x, y, pirate.x, pirate.y) < BLAST_RADIUS + pirate.radius) {
+            if (pirate.takeDamage()) {
+                createExplosion(pirate.x, pirate.y, '#ff6600', 12);
+                for (let k = 0; k < 2; k++) spawnCoin(pirate.x + randomRange(-15, 15), pirate.y + randomRange(-15, 15));
+                increaseCombo();
+                const comboMult = getComboMultiplier();
+                score += Math.floor(200 * level * comboMult);
+                aliensDestroyed++;
+                spacePiratesDestroyed++;
+                spacePirates.splice(i, 1);
+            } else {
+                createExplosion(pirate.x, pirate.y, '#ffaa00', 3);
+            }
+        }
+    }
+    
+    // Damage nearby Cosmic Jellyfish
+    for (let i = cosmicJellyfish.length - 1; i >= 0; i--) {
+        const jelly = cosmicJellyfish[i];
+        if (distance(x, y, jelly.x, jelly.y) < BLAST_RADIUS + jelly.radius) {
+            if (jelly.takeDamage()) {
+                createExplosion(jelly.x, jelly.y, '#88aaff', 15);
+                for (let k = 0; k < 2; k++) spawnCoin(jelly.x + randomRange(-20, 20), jelly.y + randomRange(-20, 20));
+                increaseCombo();
+                const comboMult = getComboMultiplier();
+                score += Math.floor(250 * level * comboMult);
+                aliensDestroyed++;
+                cosmicJellyfish.splice(i, 1);
+            } else {
+                createExplosion(jelly.x, jelly.y, '#aaccff', 3);
+            }
+        }
+    }
+    
+    updateHUD();
+}
+
 function triggerScreenShake(intensity, duration) {
     screenShake.intensity = Math.max(screenShake.intensity, intensity);
     screenShake.duration = Math.max(screenShake.duration, duration);
@@ -1270,13 +1584,16 @@ function createThrustParticle(ship) {
     particles.push(new Particle(px, py, c, Math.cos(a) * s, Math.sin(a) * s, randomRange(200, 400), randomRange(2, 4)));
 }
 
-// Powerup types: shield, rapidfire, magnet, timeslow, piercing
+// Powerup types: shield, rapidfire, magnet, timeslow, piercing, tripleshot, largebullets, blastradius
 const POWERUP_TYPES = [
     { id: 'shield', icon: '🛡️', color: '#00f0ff' },
     { id: 'rapidfire', icon: '⚡', color: '#ffd700' },
     { id: 'magnet', icon: '🧲', color: '#ff44aa' },
     { id: 'timeslow', icon: '⏱️', color: '#4488ff' },
-    { id: 'piercing', icon: '🎯', color: '#ff8800' }
+    { id: 'piercing', icon: '🎯', color: '#ff8800' },
+    { id: 'tripleshot', icon: '🔱', color: '#aa66ff' },
+    { id: 'largebullets', icon: '🔵', color: '#44ff88' },
+    { id: 'blastradius', icon: '💥', color: '#ff4444' }
 ];
 
 class Powerup {
@@ -1518,6 +1835,14 @@ function spawnBossWave() {
         }
     }
     
+    // Cosmic Jellyfish appear from level 4 onwards
+    if (level >= 4) {
+        const jellyfishCount = Math.min(Math.floor(level / 4), 2);
+        for (let i = 0; i < jellyfishCount; i++) {
+            setTimeout(() => cosmicJellyfish.push(new CosmicJellyfish(level)), 1500 + i * 1000);
+        }
+    }
+    
     queueNotification('boss-notification', 2000);
     soundManager.playLevelUp();
 }
@@ -1529,7 +1854,7 @@ function initGameLogic() {
     asteroidsDestroyed = 0; aliensDestroyed = 0; spacePiratesDestroyed = 0;
     combo = 0; comboTimer = 0; // Reset combo
     bullets = []; asteroids = []; particles = []; powerups = [];
-    catAliens = []; spacePirates = []; alienBullets = []; coinItems = [];
+    catAliens = []; spacePirates = []; cosmicJellyfish = []; alienBullets = []; coinItems = [];
     bossPhase = false; bossWaveComplete = false;
     notificationQueue = []; currentNotification = null;
     ship = new Ship();
@@ -1703,9 +2028,21 @@ function loseLife() {
         createExplosion(ship.x, ship.y, '#00ffff', 10);
         return;
     }
-    lives--; updateHUD();
-    if (lives <= 0) endGame();
-    else { ship.reset(); createExplosion(ship.x, ship.y, '#00ffff', 30); }
+    lives--; 
+    updateHUD();
+    if (lives <= 0) {
+        endGame();
+    } else { 
+        // Save death position for explosion effect
+        const deathX = ship.x;
+        const deathY = ship.y;
+        
+        // Reset position ONLY - all powerups (shield, rapidfire, magnet, timeslow, piercing, tripleshot, largebullets, blastradius) are PRESERVED
+        ship.resetPosition();
+        
+        // Create explosion at death location
+        createExplosion(deathX, deathY, '#00ffff', 30);
+    }
 }
 
 // ========================================
@@ -1737,6 +2074,7 @@ function update(dt) {
     powerups = powerups.filter(p => !p.isExpired());
     catAliens.forEach(a => a.update(gameDt));
     spacePirates.forEach(p => p.update(gameDt));
+    cosmicJellyfish.forEach(j => j.update(gameDt));
     alienBullets.forEach(b => b.update(gameDt));
     alienBullets = alienBullets.filter(b => !b.isExpired());
     coinItems.forEach(c => c.update(dt));
@@ -1748,6 +2086,11 @@ function update(dt) {
             if (bullets[i] && bullets[i].isCollidingWith(asteroids[j])) {
                 const asteroid = asteroids[j];
                 const destroyed = asteroid.hit();
+                
+                // Blast radius powerup: trigger splash damage on hit
+                if (bullets[i].hasBlastRadius) {
+                    triggerBlastRadius(bullets[i].x, bullets[i].y);
+                }
                 
                 if (destroyed) {
                     // Use asteroid type colors for explosion
@@ -1781,6 +2124,10 @@ function update(dt) {
         if (!bullets[i] || !bullets[i].isPlayer) continue;
         for (let j = catAliens.length - 1; j >= 0; j--) {
             if (distance(bullets[i].x, bullets[i].y, catAliens[j].x, catAliens[j].y) < bullets[i].radius + catAliens[j].radius) {
+                // Blast radius powerup: trigger splash damage on hit
+                if (bullets[i].hasBlastRadius) {
+                    triggerBlastRadius(bullets[i].x, bullets[i].y);
+                }
                 if (catAliens[j].takeDamage()) {
                     createExplosion(catAliens[j].x, catAliens[j].y, '#aa44ff', 25);
                     for (let k = 0; k < 5; k++) spawnCoin(catAliens[j].x + randomRange(-30, 30), catAliens[j].y + randomRange(-30, 30));
@@ -1818,6 +2165,10 @@ function update(dt) {
         if (!bullets[i] || !bullets[i].isPlayer) continue;
         for (let j = spacePirates.length - 1; j >= 0; j--) {
             if (distance(bullets[i].x, bullets[i].y, spacePirates[j].x, spacePirates[j].y) < bullets[i].radius + spacePirates[j].radius) {
+                // Blast radius powerup: trigger splash damage on hit
+                if (bullets[i].hasBlastRadius) {
+                    triggerBlastRadius(bullets[i].x, bullets[i].y);
+                }
                 if (spacePirates[j].takeDamage()) {
                     createExplosion(spacePirates[j].x, spacePirates[j].y, '#ff6600', 20);
                     for (let k = 0; k < 3; k++) spawnCoin(spacePirates[j].x + randomRange(-20, 20), spacePirates[j].y + randomRange(-20, 20));
@@ -1829,6 +2180,40 @@ function update(dt) {
                     spacePirates.splice(j, 1);
                 } else {
                     createExplosion(spacePirates[j].x, spacePirates[j].y, '#ffaa00', 5);
+                }
+                if (bullets[i].piercing) {
+                    bullets[i].hitCount++;
+                } else {
+                    bullets.splice(i, 1);
+                }
+                updateHUD();
+                break;
+            }
+        }
+    }
+
+    // Ship-jellyfish collisions
+    for (let j of cosmicJellyfish) { if (ship.isCollidingWith({ x: j.x, y: j.y, radius: j.radius })) { createExplosion(ship.x, ship.y, '#8888ff', 40); loseLife(); break; } }
+
+    // Bullet-jellyfish collisions
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        if (!bullets[i] || !bullets[i].isPlayer) continue;
+        for (let j = cosmicJellyfish.length - 1; j >= 0; j--) {
+            if (distance(bullets[i].x, bullets[i].y, cosmicJellyfish[j].x, cosmicJellyfish[j].y) < bullets[i].radius + cosmicJellyfish[j].radius) {
+                // Blast radius powerup: trigger splash damage on hit
+                if (bullets[i].hasBlastRadius) {
+                    triggerBlastRadius(bullets[i].x, bullets[i].y);
+                }
+                if (cosmicJellyfish[j].takeDamage()) {
+                    createExplosion(cosmicJellyfish[j].x, cosmicJellyfish[j].y, '#88aaff', 22);
+                    for (let k = 0; k < 4; k++) spawnCoin(cosmicJellyfish[j].x + randomRange(-25, 25), cosmicJellyfish[j].y + randomRange(-25, 25));
+                    increaseCombo();
+                    const comboMult = getComboMultiplier();
+                    score += Math.floor(400 * level * comboMult);
+                    aliensDestroyed++;
+                    cosmicJellyfish.splice(j, 1);
+                } else {
+                    createExplosion(cosmicJellyfish[j].x, cosmicJellyfish[j].y, '#aaccff', 5);
                 }
                 if (bullets[i].piercing) {
                     bullets[i].hitCount++;
@@ -1861,6 +2246,9 @@ function update(dt) {
                 case 'magnet': ship.activateMagnet(); break;
                 case 'timeslow': ship.activateTimeSlow(); break;
                 case 'piercing': ship.activatePiercing(); break;
+                case 'tripleshot': ship.activateTripleShot(); break;
+                case 'largebullets': ship.activateLargeBullets(); break;
+                case 'blastradius': ship.activateBlastRadius(); break;
             }
             createExplosion(powerups[i].x, powerups[i].y, powerups[i].color, 10);
             powerups.splice(i, 1);
@@ -1880,7 +2268,7 @@ function update(dt) {
 
     // Level progression
     if (!bossPhase && asteroids.length === 0) spawnBossWave();
-    if (bossPhase && catAliens.length === 0 && spacePirates.length === 0 && !bossWaveComplete) {
+    if (bossPhase && catAliens.length === 0 && spacePirates.length === 0 && cosmicJellyfish.length === 0 && !bossWaveComplete) {
         bossWaveComplete = true;
         queueNotification('wave-clear-notification', 1500);
         setTimeout(nextLevel, 2500);
@@ -1912,6 +2300,7 @@ function render() {
     asteroids.forEach(a => a.draw());
     catAliens.forEach(a => a.draw());
     spacePirates.forEach(p => p.draw());
+    cosmicJellyfish.forEach(j => j.draw());
     bullets.forEach(b => b.draw());
     alienBullets.forEach(b => b.draw());
     if (ship && currentState === GameState.PLAYING) ship.draw();
