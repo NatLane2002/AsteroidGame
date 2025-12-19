@@ -175,18 +175,36 @@
                 <h2 class="overlay-title">HOW TO PLAY</h2>
                 <div class="controls-info-large">
                     <div class="control-group">
-                        <h3>KEYBOARD</h3>
-                        <div class="control-row"><span class="key">W</span> / <span class="key">↑</span> <span>Thrust</span></div>
+                        <h3>⌨️ KEYBOARD MODE</h3>
+                        <p class="control-scheme-desc">Classic arcade controls</p>
+                        <div class="control-row"><span class="key">W</span> / <span class="key">↑</span> <span>Thrust Forward</span></div>
                         <div class="control-row"><span class="key">A</span> / <span class="key">←</span> <span>Rotate Left</span></div>
                         <div class="control-row"><span class="key">D</span> / <span class="key">→</span> <span>Rotate Right</span></div>
                         <div class="control-row"><span class="key">SPACE</span> <span>Fire</span></div>
                     </div>
                     <div class="control-group">
-                        <h3>MOBILE</h3>
+                        <h3>🎯 MOUSE+KEYS MODE</h3>
+                        <p class="control-scheme-desc">WASD movement + mouse aiming</p>
+                        <div class="control-row"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> <span>Move Ship</span></div>
+                        <div class="control-row"><span class="key">MOUSE</span> <span>Aim Direction</span></div>
+                        <div class="control-row"><span class="key">LEFT CLICK</span> <span>Fire (hold to auto-fire)</span></div>
+                        <p class="control-note">Ship faces cursor, WASD moves independently!</p>
+                    </div>
+                    <div class="control-group">
+                        <h3>🖱️ MOUSE ONLY MODE</h3>
+                        <p class="control-scheme-desc">Pure mouse control</p>
+                        <div class="control-row"><span class="key">MOUSE</span> <span>Aim Direction</span></div>
+                        <div class="control-row"><span class="key">LEFT CLICK</span> <span>Fire (hold to auto-fire)</span></div>
+                        <div class="control-row"><span class="key">RIGHT CLICK</span> <span>Thrust Forward (hold)</span></div>
+                        <p class="control-note">No keyboard needed - aim and thrust with mouse!</p>
+                    </div>
+                    <div class="control-group">
+                        <h3>📱 MOBILE</h3>
                         <p>Use the on-screen Joystick to move and Rotate.</p>
                         <p>Tap the Red Button to Fire.</p>
                     </div>
                 </div>
+                <p class="settings-hint">Change control scheme in ⚙️ Settings</p>
                 <button class="game-button secondary back-button" onclick="showOverlay('start-screen'); hideOverlay('guide-screen')">
                     <span>← BACK TO MENU</span>
                 </button>
@@ -456,6 +474,23 @@
                         <button id="sfx-toggle" class="toggle-button active">
                             <span class="toggle-text" id="sfx-text">ON</span>
                         </button>
+                    </div>
+                    <div class="setting-row desktop-only" id="control-scheme-setting">
+                        <span class="setting-label">🎮 Control Scheme</span>
+                        <div class="control-scheme-selector">
+                            <button id="scheme-keyboard" class="scheme-btn active" data-scheme="keyboard">
+                                <span class="scheme-icon">⌨️</span>
+                                <span class="scheme-name">Keyboard</span>
+                            </button>
+                            <button id="scheme-mouse" class="scheme-btn" data-scheme="mouse-aim">
+                                <span class="scheme-icon">🎯</span>
+                                <span class="scheme-name">Mouse+Keys</span>
+                            </button>
+                            <button id="scheme-mouse-only" class="scheme-btn" data-scheme="mouse-only">
+                                <span class="scheme-icon">🖱️</span>
+                                <span class="scheme-name">Mouse Only</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="setting-row mobile-only" id="mobile-zoom-setting">
                         <span class="setting-label">🔍 Mobile FOV</span>

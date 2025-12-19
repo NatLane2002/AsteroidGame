@@ -24,12 +24,18 @@ let gameData = {
     stats: { totalGames: 0, totalAsteroids: 0, totalAliens: 0, totalSpacePirates: 0, totalCoinsEarned: 0 },
     achievements: [], // Array of unlocked achievement IDs
     modifiers: { fastMode: false, immortalMode: false, slowMode: false, nightmareMode: false },
-    settings: { mobileZoom: 1800 }
+    settings: { mobileZoom: 1800, controlScheme: 'keyboard' }
 };
 
 // Timing
 let lastTime = 0, deltaTime = 0;
 const keys = {};
+
+// Mouse tracking for mouse-aim and mouse-only control schemes
+let mouseX = 0;
+let mouseY = 0;
+let mouseDown = false;      // Left mouse button (fire)
+let rightMouseDown = false; // Right mouse button (thrust in mouse-only mode)
 
 // Game Objects
 let ship = null, bullets = [], asteroids = [], particles = [], powerups = [], stars = [];
@@ -109,7 +115,9 @@ function loadGameData() {
             if (!gameData.equippedItems.background) { gameData.equippedItems.background = 'default'; }
             
             // Ensure settings exist
-            if (!gameData.settings) { gameData.settings = { mobileZoom: 1800 }; }
+            if (!gameData.settings) { gameData.settings = { mobileZoom: 1800, controlScheme: 'keyboard' }; }
+            // Ensure controlScheme exists (for old saves)
+            if (!gameData.settings.controlScheme) { gameData.settings.controlScheme = 'keyboard'; }
             
             // Restore modifiers if present in save
             if (gameData.modifiers) {
@@ -511,20 +519,76 @@ class Ship {
         if (this.timeSlowActive) { this.timeSlowTime -= dt * 1000; if (this.timeSlowTime <= 0) this.timeSlowActive = false; updatePowerupIndicator('timeslow', this.timeSlowTime, TIMESLOW_DURATION); }
         if (this.piercingActive) { this.piercingTime -= dt * 1000; if (this.piercingTime <= 0) this.piercingActive = false; updatePowerupIndicator('piercing', this.piercingTime, POWERUP_DURATION); }
         
-        // PERFECTION: Joystick Directional Control
+        // Control scheme handling
+        const controlScheme = gameData.settings?.controlScheme || 'keyboard';
+        
+        // PERFECTION: Joystick Directional Control (Mobile takes priority)
         if (mobileAngle !== null) {
             this.angle = mobileAngle;
             this.thrusting = mobileThrusting;
+        } else if (controlScheme === 'mouse-only' && !isMobile) {
+            // MOUSE-ONLY CONTROL SCHEME (Desktop only)
+            // Ship always faces the mouse cursor
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / canvasRect.width;
+            const scaleY = canvas.height / canvasRect.height;
+            const adjustedMouseX = mouseX * scaleX;
+            const adjustedMouseY = mouseY * scaleY;
+            
+            const dx = adjustedMouseX - this.x;
+            const dy = adjustedMouseY - this.y;
+            this.angle = Math.atan2(dy, dx);
+            
+            // Thrust: Right mouse button thrusts forward in facing direction
+            this.thrusting = rightMouseDown;
+            this._moveAngle = null; // In mouse-only, thrust is always in facing direction
+        } else if (controlScheme === 'mouse-aim' && !isMobile) {
+            // MOUSE-AIM CONTROL SCHEME (Desktop only)
+            // Ship always faces the mouse cursor
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / canvasRect.width;
+            const scaleY = canvas.height / canvasRect.height;
+            const adjustedMouseX = mouseX * scaleX;
+            const adjustedMouseY = mouseY * scaleY;
+            
+            const dx = adjustedMouseX - this.x;
+            const dy = adjustedMouseY - this.y;
+            this.angle = Math.atan2(dy, dx);
+            
+            // Movement: WASD/Arrows control thrust direction (not rotation)
+            // Calculate movement vector from key inputs
+            let moveX = 0, moveY = 0;
+            if (keys['ArrowUp'] || keys['KeyW']) moveY -= 1;
+            if (keys['ArrowDown'] || keys['KeyS']) moveY += 1;
+            if (keys['ArrowLeft'] || keys['KeyA']) moveX -= 1;
+            if (keys['ArrowRight'] || keys['KeyD']) moveX += 1;
+            
+            // Normalize diagonal movement
+            const moveMag = Math.sqrt(moveX * moveX + moveY * moveY);
+            if (moveMag > 0) {
+                moveX /= moveMag;
+                moveY /= moveMag;
+                this.thrusting = true;
+                // Store movement direction for thrust (separate from aim angle)
+                this._moveAngle = Math.atan2(moveY, moveX);
+            } else {
+                this.thrusting = false;
+                this._moveAngle = null;
+            }
         } else {
+            // KEYBOARD CONTROL SCHEME (Classic - default)
             if (keys['ArrowLeft'] || keys['KeyA']) this.angle -= SHIP_ROTATION_SPEED * dt * getModifierSpeedMultiplier();
             if (keys['ArrowRight'] || keys['KeyD']) this.angle += SHIP_ROTATION_SPEED * dt * getModifierSpeedMultiplier();
             this.thrusting = keys['ArrowUp'] || keys['KeyW'];
+            this._moveAngle = null; // Clear move angle, thrust goes in facing direction
         }
 
         if (this.thrusting) {
             const thrustMult = getModifierSpeedMultiplier() * (mobileAngle !== null ? mobileThrustMagnitude : 1);
-            this.vx += Math.cos(this.angle) * SHIP_THRUST * dt * thrustMult;
-            this.vy += Math.sin(this.angle) * SHIP_THRUST * dt * thrustMult;
+            // In mouse-aim mode, thrust goes in movement direction, not facing direction
+            const thrustAngle = (this._moveAngle !== null && this._moveAngle !== undefined) ? this._moveAngle : this.angle;
+            this.vx += Math.cos(thrustAngle) * SHIP_THRUST * dt * thrustMult;
+            this.vy += Math.sin(thrustAngle) * SHIP_THRUST * dt * thrustMult;
             if (Math.random() < 0.5) createThrustParticle(this);
         }
         this.vx *= SHIP_FRICTION; this.vy *= SHIP_FRICTION;
@@ -535,8 +599,11 @@ class Ship {
         this.idleBobPhase += dt * 2;
         this.idleRotationPhase += dt * 1.5;
         
+        // Firing: Space for keyboard, Left Mouse for mouse-aim and mouse-only modes
         const fireRate = this.rapidFireActive ? RAPID_FIRE_RATE : FIRE_RATE;
-        if (keys['Space'] && Date.now() - this.lastFireTime > fireRate) { this.fire(); this.lastFireTime = Date.now(); }
+        const usesMouseFire = (controlScheme === 'mouse-aim' || controlScheme === 'mouse-only') && !isMobile;
+        const shouldFire = (usesMouseFire && mouseDown) || keys['Space'];
+        if (shouldFire && Date.now() - this.lastFireTime > fireRate) { this.fire(); this.lastFireTime = Date.now(); }
         
         return gameDt; // Return the game delta time for other objects
     }
@@ -1193,9 +1260,13 @@ function createThrustParticle(ship) {
     let c;
     if (trail.colors[0] === 'rainbow') c = `hsl(${(Date.now() / 5) % 360}, 100%, 50%)`;
     else c = trail.colors[Math.random() > 0.5 ? 0 : 1];
-    const a = ship.angle + Math.PI + randomRange(-0.3, 0.3), s = randomRange(100, 200);
-    const px = ship.x - Math.cos(ship.angle) * SHIP_SIZE * 0.5;
-    const py = ship.y - Math.sin(ship.angle) * SHIP_SIZE * 0.5;
+    
+    // In mouse-aim mode, use movement angle for thrust particles if moving
+    const thrustAngle = (ship._moveAngle !== null && ship._moveAngle !== undefined) ? ship._moveAngle : ship.angle;
+    
+    const a = thrustAngle + Math.PI + randomRange(-0.3, 0.3), s = randomRange(100, 200);
+    const px = ship.x - Math.cos(thrustAngle) * SHIP_SIZE * 0.5;
+    const py = ship.y - Math.sin(thrustAngle) * SHIP_SIZE * 0.5;
     particles.push(new Particle(px, py, c, Math.cos(a) * s, Math.sin(a) * s, randomRange(200, 400), randomRange(2, 4)));
 }
 
@@ -2473,6 +2544,60 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
+// Mouse event listeners for mouse-aim and mouse-only control schemes
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 0) { // Left mouse button (fire)
+        mouseDown = true;
+        // Prevent default to avoid text selection while playing
+        if (currentState === GameState.PLAYING) {
+            e.preventDefault();
+        }
+    } else if (e.button === 2) { // Right mouse button (thrust in mouse-only mode)
+        rightMouseDown = true;
+        // Prevent default to ensure context menu doesn't appear
+        if (currentState === GameState.PLAYING) {
+            e.preventDefault();
+        }
+    }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+    if (e.button === 0) {
+        mouseDown = false;
+    } else if (e.button === 2) {
+        rightMouseDown = false;
+    }
+});
+
+// Handle mouse leaving canvas - stop firing and thrusting
+canvas.addEventListener('mouseleave', () => {
+    mouseDown = false;
+    rightMouseDown = false;
+});
+
+// Handle window blur - stop firing and thrusting, clear all keys
+window.addEventListener('blur', () => {
+    mouseDown = false;
+    rightMouseDown = false;
+    // Clear all keys when window loses focus
+    Object.keys(keys).forEach(key => keys[key] = false);
+});
+
+// Prevent context menu on canvas during gameplay (required for mouse-only right-click thrust)
+canvas.addEventListener('contextmenu', (e) => {
+    // Always prevent context menu when playing, regardless of control scheme
+    // This enables right-click thrust in mouse-only mode and prevents interruption in other modes
+    if (currentState === GameState.PLAYING) {
+        e.preventDefault();
+    }
+});
+
 // Main menu buttons
 document.getElementById('start-button').addEventListener('click', startGame);
 document.getElementById('resume-button').addEventListener('click', resumeGame);
@@ -2569,6 +2694,44 @@ if (zoomSlider) {
         saveGameData();
         resizeCanvas();
     });
+}
+
+// Control Scheme Selector
+const schemeKeyboardBtn = document.getElementById('scheme-keyboard');
+const schemeMouseBtn = document.getElementById('scheme-mouse');
+const schemeMouseOnlyBtn = document.getElementById('scheme-mouse-only');
+
+function initControlSchemeUI() {
+    if (!schemeKeyboardBtn || !schemeMouseBtn || !schemeMouseOnlyBtn) return;
+    
+    const currentScheme = gameData.settings?.controlScheme || 'keyboard';
+    
+    // Update button states
+    schemeKeyboardBtn.classList.toggle('active', currentScheme === 'keyboard');
+    schemeMouseBtn.classList.toggle('active', currentScheme === 'mouse-aim');
+    schemeMouseOnlyBtn.classList.toggle('active', currentScheme === 'mouse-only');
+}
+
+function setControlScheme(scheme) {
+    gameData.settings.controlScheme = scheme;
+    saveGameData();
+    
+    // Update button states - deactivate all, then activate selected
+    schemeKeyboardBtn.classList.toggle('active', scheme === 'keyboard');
+    schemeMouseBtn.classList.toggle('active', scheme === 'mouse-aim');
+    schemeMouseOnlyBtn.classList.toggle('active', scheme === 'mouse-only');
+}
+
+if (schemeKeyboardBtn) {
+    schemeKeyboardBtn.addEventListener('click', () => setControlScheme('keyboard'));
+}
+
+if (schemeMouseBtn) {
+    schemeMouseBtn.addEventListener('click', () => setControlScheme('mouse-aim'));
+}
+
+if (schemeMouseOnlyBtn) {
+    schemeMouseOnlyBtn.addEventListener('click', () => setControlScheme('mouse-only'));
 }
 
 // ========================================
@@ -2922,6 +3085,7 @@ function hideLoadingScreen() {
 function init() {
     loadGameData();
     initModifiersUI(); // Initialize modifier UI state
+    initControlSchemeUI(); // Initialize control scheme UI state
     resizeCanvas();
     updateHUD();
     updateWalletDisplays();
