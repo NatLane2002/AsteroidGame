@@ -1708,6 +1708,23 @@ html, body {
     .icon-btn-emoji { font-size: 1.2rem; }
     .icon-btn-text { font-size: 0.6rem; letter-spacing: 1px; }
 
+    /* Compact In-Game Popups (Notifications) */
+    .notification {
+        padding: 10px 30px;
+        border-width: 1px;
+        border-radius: 8px;
+    }
+    .notification-text {
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+    }
+    .boss-text {
+        font-size: 1rem !important;
+    }
+    .wave-clear-text {
+        font-size: 1rem !important;
+    }
+
     .mobile-only {
         display: none !important;
     }

@@ -522,7 +522,7 @@ class Ship {
         }
 
         if (this.thrusting) {
-            const thrustMult = getModifierSpeedMultiplier();
+            const thrustMult = getModifierSpeedMultiplier() * (mobileAngle !== null ? mobileThrustMagnitude : 1);
             this.vx += Math.cos(this.angle) * SHIP_THRUST * dt * thrustMult;
             this.vy += Math.sin(this.angle) * SHIP_THRUST * dt * thrustMult;
             if (Math.random() < 0.5) createThrustParticle(this);
@@ -2582,6 +2582,7 @@ let mobileFireActive = false;
 let mobileFireTouchId = null;
 let mobileAngle = null;
 let mobileThrusting = false;
+let mobileThrustMagnitude = 0;
 let lastTapTime = 0;
 let tapCount = 0;
 
@@ -2750,14 +2751,16 @@ function initMobileControls() {
         
         joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
         
-        // PERFECTION: Absolute Direction Control
+        // PERFECTION: Absolute Direction Control + Analog Thrust
         const threshold = 10;
         if (dist > threshold) {
             mobileAngle = Math.atan2(dy, dx);
-            mobileThrusting = dist > threshold * 1.5;
+            mobileThrustMagnitude = (dist - threshold) / (maxDist - threshold);
+            mobileThrusting = mobileThrustMagnitude > 0.1;
         } else {
             // Keep current angle but stop thrusting in deadzone
             mobileThrusting = false;
+            mobileThrustMagnitude = 0;
         }
     }
     
@@ -2772,6 +2775,7 @@ function initMobileControls() {
                 joystickBase.style.display = 'none';
                 mobileAngle = null; // Let standard rotation logic take over if needed
                 mobileThrusting = false;
+                mobileThrustMagnitude = 0;
             }
             
             if (touch.identifier === mobileFireTouchId) {
