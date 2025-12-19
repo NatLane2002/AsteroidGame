@@ -395,27 +395,11 @@ const SHOP_ITEMS = {
 // ========================================
 // UTILITY FUNCTIONS
 // ========================================
-function checkRotation() {
-    isMobile = detectMobile();
-    if (!isMobile) {
-        hideOverlay('rotate-overlay');
-        return;
-    }
-    
-    const isPortrait = window.innerHeight > window.innerWidth;
-    if (isPortrait) {
-        showOverlay('rotate-overlay');
-    } else {
-        hideOverlay('rotate-overlay');
-    }
-}
-
 function resizeCanvas() { 
     isMobile = detectMobile();
-    checkRotation();
     
     if (isMobile) {
-        const targetWidth = 1000; // Increased virtual width for even better landscape gameplay
+        const targetWidth = 1000; 
         const scale = Math.max(1.2, targetWidth / window.innerWidth);
         
         canvas.width = Math.floor(window.innerWidth * scale);
@@ -1487,20 +1471,7 @@ function initGameLogic() {
 // New Start Game Manager
 function startGame() {
     soundManager.init();
-    
-    // Check mobile status
     isMobile = detectMobile();
-    
-    if (isMobile) {
-        // Attempt to lock landscape orientation (Screen Orientation API)
-        if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape').catch(e => console.log("Orientation lock denied"));
-        }
-        
-        // Final orientation check before countdown
-        checkRotation();
-    }
-    
     beginCountdown();
 }
 
@@ -1513,9 +1484,7 @@ function beginCountdown() {
     hideOverlay('gameover-screen');
     hideOverlay('pause-screen');
     
-    // Ensure any stuck rotation overlay is hidden (just in case)
-    const rotOverlay = document.getElementById('rotate-overlay');
-    if (rotOverlay) rotOverlay.classList.add('hidden');
+
     
     const overlay = document.getElementById('countdown-overlay');
     const text = document.getElementById('countdown-text');
@@ -2637,10 +2606,7 @@ function initMobileControls() {
     if (!detectMobile()) return;
     isMobile = true;
     
-    // Check orientation on start
-    checkRotation();
     window.addEventListener('orientationchange', () => {
-        setTimeout(checkRotation, 200); // Small delay to let viewport update
         setTimeout(resizeCanvas, 300);
     });
     
