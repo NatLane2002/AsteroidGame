@@ -13,7 +13,7 @@ let currentState = GameState.MENU;
 
 // Game Variables
 let score = 0, level = 1, lives = 3, coinsThisGame = 0;
-let asteroidsDestroyed = 0, aliensDestroyed = 0, spacePiratesDestroyed = 0;
+let asteroidsDestroyed = 0, aliensDestroyed = 0, spacePiratesDestroyed = 0, jellyfishDestroyed = 0;
 
 // Persistent Data (loaded from localStorage)
 let gameData = {
@@ -21,7 +21,7 @@ let gameData = {
     totalCoins: 0,
     ownedItems: { skins: ['default'], trails: ['default'], bullets: ['default'], backgrounds: ['default'] },
     equippedItems: { skin: 'default', trail: 'default', bullet: 'default', background: 'default' },
-    stats: { totalGames: 0, totalAsteroids: 0, totalAliens: 0, totalSpacePirates: 0, totalCoinsEarned: 0 },
+    stats: { totalGames: 0, totalAsteroids: 0, totalAliens: 0, totalSpacePirates: 0, totalJellyfish: 0, totalCoinsEarned: 0 },
     achievements: [], // Array of unlocked achievement IDs
     modifiers: { fastMode: false, immortalMode: false, slowMode: false, nightmareMode: false },
     settings: { mobileZoom: 1800, controlScheme: 'keyboard' }
@@ -1536,6 +1536,7 @@ function triggerBlastRadius(x, y) {
                 const comboMult = getComboMultiplier();
                 score += Math.floor(250 * level * comboMult);
                 aliensDestroyed++;
+                jellyfishDestroyed++;
                 cosmicJellyfish.splice(i, 1);
             } else {
                 createExplosion(jelly.x, jelly.y, '#aaccff', 3);
@@ -1851,7 +1852,7 @@ function spawnBossWave() {
 function initGameLogic() {
     currentState = GameState.PLAYING;
     score = 0; level = 1; lives = 3; coinsThisGame = 0;
-    asteroidsDestroyed = 0; aliensDestroyed = 0; spacePiratesDestroyed = 0;
+    asteroidsDestroyed = 0; aliensDestroyed = 0; spacePiratesDestroyed = 0; jellyfishDestroyed = 0;
     combo = 0; comboTimer = 0; // Reset combo
     bullets = []; asteroids = []; particles = []; powerups = [];
     catAliens = []; spacePirates = []; cosmicJellyfish = []; alienBullets = []; coinItems = [];
@@ -1932,16 +1933,24 @@ function beginCountdown() {
 }
 
 function endGame() {
+    // PERFECTION: Prevent double-triggering game over logic (e.g. multiple collisions in one frame)
+    if (currentState === GameState.GAMEOVER) return;
+
     currentState = GameState.GAMEOVER;
     gameData.totalCoins += coinsThisGame;
     gameData.stats.totalAsteroids += asteroidsDestroyed;
     gameData.stats.totalAliens += aliensDestroyed;
     gameData.stats.totalSpacePirates = (gameData.stats.totalSpacePirates || 0) + spacePiratesDestroyed;
+    gameData.stats.totalJellyfish = (gameData.stats.totalJellyfish || 0) + jellyfishDestroyed;
     gameData.stats.totalCoinsEarned += coinsThisGame;
     
     // Only check highscore if NO cheat modifiers are active
-    if (!hasCheatModifiers() && score > gameData.highScore) {
-        gameData.highScore = score;
+    // PERFECTION: Explicit number comparison to ensure accuracy against saved high score
+    const currentScore = Number(score);
+    const savedHighScore = Number(gameData.highScore || 0);
+
+    if (!hasCheatModifiers() && currentScore > savedHighScore) {
+        gameData.highScore = currentScore;
         document.getElementById('highscore-display').classList.remove('hidden');
     } else {
         document.getElementById('highscore-display').classList.add('hidden');
@@ -2231,6 +2240,7 @@ function update(dt) {
                     const comboMult = getComboMultiplier();
                     score += Math.floor(400 * level * comboMult);
                     aliensDestroyed++;
+                    jellyfishDestroyed++;
                     cosmicJellyfish.splice(j, 1);
                 } else {
                     createExplosion(cosmicJellyfish[j].x, cosmicJellyfish[j].y, '#aaccff', 5);
@@ -3037,8 +3047,11 @@ function updateStatsScreen() {
     document.getElementById('stat-asteroids').textContent = gameData.stats.totalAsteroids.toLocaleString();
     // totalAliens includes both Cat Aliens and Pirates, so subtract Pirates to get just Cat Aliens
     const totalPirates = gameData.stats.totalSpacePirates || 0;
-    document.getElementById('stat-aliens').textContent = (gameData.stats.totalAliens - totalPirates).toLocaleString();
+    const totalJellyfish = gameData.stats.totalJellyfish || 0;
+    // Total Aliens contains everything, so subtract Pirates and Jellyfish to show just Cat Aliens
+    document.getElementById('stat-aliens').textContent = (gameData.stats.totalAliens - totalPirates - totalJellyfish).toLocaleString();
     document.getElementById('stat-space-pirates').textContent = totalPirates.toLocaleString();
+    document.getElementById('stat-jellyfish').textContent = totalJellyfish.toLocaleString();
     document.getElementById('stat-total-coins').textContent = gameData.stats.totalCoinsEarned.toLocaleString();
 }
 

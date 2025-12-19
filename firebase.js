@@ -276,6 +276,7 @@ function mergeAndApplyData(cloudData) {
         gameData.stats.totalAsteroids = Math.max(gameData.stats.totalAsteroids || 0, cloudData.stats.totalAsteroids || 0);
         gameData.stats.totalAliens = Math.max(gameData.stats.totalAliens || 0, cloudData.stats.totalAliens || 0);
         gameData.stats.totalSpacePirates = Math.max(gameData.stats.totalSpacePirates || 0, cloudData.stats.totalSpacePirates || 0);
+        gameData.stats.totalJellyfish = Math.max(gameData.stats.totalJellyfish || 0, cloudData.stats.totalJellyfish || 0);
         gameData.stats.totalCoinsEarned = Math.max(gameData.stats.totalCoinsEarned || 0, cloudData.stats.totalCoinsEarned || 0);
     }
     
