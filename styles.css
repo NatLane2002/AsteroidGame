@@ -1598,6 +1598,87 @@ html, body {
     box-shadow: 0 4px 15px rgba(255, 68, 0, 0.2);
 }
 
+/* ========================================
+   MOBILE UI SCALING REFINEMENTS
+   ======================================== */
+@media (max-width: 950px) {
+    /* Smaller HUD */
+    .hud-box {
+        padding: 5px 10px;
+        border-radius: 8px;
+    }
+    .hud-label {
+        font-size: 0.5rem;
+        letter-spacing: 1px;
+        margin-bottom: 2px;
+    }
+    .hud-value {
+        font-size: 1rem;
+    }
+    .coin-icon {
+        font-size: 1rem;
+    }
+    #top-left-hud, #top-right-hud, #bottom-left-hud, #bottom-right-hud {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+    }
+    #bottom-left-hud {
+        gap: 5px;
+    }
+    .powerup-indicator {
+        padding: 4px 8px;
+        gap: 6px;
+    }
+    .powerup-icon { font-size: 0.9rem; }
+    .powerup-bar { width: 40px; height: 4px; }
+    .powerup-name { display: none; }
+    
+    /* Smaller Menus */
+    .pause-title, .gameover-title {
+        font-size: 1.8rem;
+        margin-bottom: 15px;
+    }
+    .overlay-content {
+        padding: 15px;
+        max-width: 320px;
+    }
+    .final-stats {
+        padding: 15px;
+        margin-bottom: 15px;
+        gap: 8px;
+    }
+    .stat-row { font-size: 0.8rem; }
+    .stat-label { font-size: 0.75rem; }
+    .stat-value { font-size: 1rem; }
+    
+    .game-button {
+        min-width: 140px;
+        padding: 10px 20px;
+        font-size: 0.85rem;
+        margin: 3px;
+    }
+
+    .wallet-display {
+        padding: 8px 15px;
+        margin-bottom: 10px;
+    }
+    .wallet-coins {
+        font-size: 1.1rem;
+    }
+    .menu-secondary-buttons {
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .icon-button {
+        padding: 8px 15px;
+        min-width: 60px;
+    }
+    .icon-btn-emoji { font-size: 1.2rem; }
+    .icon-btn-text { font-size: 0.6rem; letter-spacing: 1px; }
+}
+
 /* Modifier Status on Mod Screen */
 .current-modifiers-status {
     background: rgba(0, 0, 0, 0.6);

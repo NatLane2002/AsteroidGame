@@ -2551,6 +2551,8 @@ let mobileFireActive = false;
 let mobileFireTouchId = null;
 let mobileAngle = null;
 let mobileThrusting = false;
+let lastTapTime = 0;
+let tapCount = 0;
 
 // Fullscreen toggle
 function toggleFullscreen() {
@@ -2629,9 +2631,25 @@ function initMobileControls() {
     
     let joystickTouchId = null;
     
-    // PERFECTION: Dynamic Touch-to-Show Controls
+    // PERFECTION: Dynamic Touch-to-Show Controls + Triple Tap to Pause
     document.addEventListener('touchstart', (e) => {
         if (currentState !== GameState.PLAYING) return;
+        
+        // TRIPLE TAP DETECTION
+        const currentTime = Date.now();
+        const tapDelay = 300; // ms
+        if (currentTime - lastTapTime < tapDelay) {
+            tapCount++;
+        } else {
+            tapCount = 1;
+        }
+        lastTapTime = currentTime;
+        
+        if (tapCount >= 3) {
+            tapCount = 0;
+            pauseGame();
+            return;
+        }
         
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];
