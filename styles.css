@@ -1,0 +1,805 @@
+/* ========================================
+   ASTEROID BLASTER - GAME STYLES
+   Complete with Shop, Coins, Cat Aliens
+   Reorganized HUD Layout
+   ======================================== */
+
+/* CSS Custom Properties */
+:root {
+    --color-bg-dark: #0a0a1a;
+    --color-bg-medium: #12122a;
+    --color-primary: #00f0ff;
+    --color-primary-dim: #00a0aa;
+    --color-secondary: #ff3366;
+    --color-accent: #ffd700;
+    --color-success: #00ff88;
+    --color-purple: #aa44ff;
+    --color-orange: #ff8800;
+    --color-text: #ffffff;
+    --color-text-dim: rgba(255, 255, 255, 0.6);
+    
+    --gradient-primary: linear-gradient(135deg, #00f0ff 0%, #0066ff 100%);
+    --gradient-danger: linear-gradient(135deg, #ff3366 0%, #ff6600 100%);
+    --gradient-gold: linear-gradient(135deg, #ffd700 0%, #ff9900 100%);
+    --gradient-purple: linear-gradient(135deg, #aa44ff 0%, #6622cc 100%);
+    
+    --glow-primary: 0 0 20px rgba(0, 240, 255, 0.5);
+    --glow-secondary: 0 0 20px rgba(255, 51, 102, 0.5);
+    --glow-accent: 0 0 20px rgba(255, 215, 0, 0.5);
+    --glow-purple: 0 0 20px rgba(170, 68, 255, 0.5);
+    
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Exo 2', sans-serif;
+    
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+}
+
+/* Reset & Base Styles */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--color-bg-dark);
+    font-family: var(--font-body);
+    color: var(--color-text);
+}
+
+/* Game Container */
+#game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(ellipse at center, var(--color-bg-medium) 0%, var(--color-bg-dark) 100%);
+}
+
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+}
+
+/* ========================================
+   HUD STYLES - REORGANIZED LAYOUT
+   ======================================== */
+
+#hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* HUD Box Base Style */
+.hud-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+/* Top Left - Score */
+#top-left-hud {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+}
+
+/* Top Right - Lives */
+#top-right-hud {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+/* Bottom Left - Coins & Powerups */
+#bottom-left-hud {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Bottom Right - Level */
+#bottom-right-hud {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+}
+
+#coins-container {
+    border-color: rgba(255, 215, 0, 0.3);
+}
+
+.coins-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.coin-icon {
+    font-size: 1.4rem;
+    animation: coinSpin 2s linear infinite;
+}
+
+@keyframes coinSpin {
+    0%, 100% { transform: rotateY(0deg); }
+    50% { transform: rotateY(180deg); }
+}
+
+.coins-value {
+    color: var(--color-accent) !important;
+    text-shadow: var(--glow-accent) !important;
+}
+
+.hud-label {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--color-primary-dim);
+    margin-bottom: 4px;
+}
+
+.hud-value {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-shadow: var(--glow-primary);
+}
+
+#lives {
+    display: flex;
+    gap: 8px;
+}
+
+.life-icon {
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 0 8px var(--color-primary));
+}
+
+.life-icon.lost {
+    opacity: 0.2;
+    filter: none;
+}
+
+/* Powerup Container - Below Coins */
+#powerup-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.powerup-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all var(--transition-normal);
+}
+
+.powerup-indicator.hidden {
+    display: none;
+}
+
+.powerup-icon {
+    font-size: 1.1rem;
+}
+
+.powerup-name {
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    color: var(--color-text-dim);
+    letter-spacing: 1px;
+    min-width: 80px;
+}
+
+.powerup-bar {
+    width: 80px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.powerup-bar > div {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.1s linear;
+}
+
+#shield-bar { background: var(--gradient-primary); }
+#rapidfire-bar { background: var(--gradient-gold); }
+#magnet-bar { background: linear-gradient(90deg, #ff44aa, #ff88cc); }
+#timeslow-bar { background: linear-gradient(90deg, #4488ff, #88ccff); }
+#piercing-bar { background: linear-gradient(90deg, #ff6600, #ffaa00); }
+
+/* ========================================
+   OVERLAY SCREENS
+   ======================================== */
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(ellipse at center, rgba(10, 10, 26, 0.9) 0%, rgba(10, 10, 26, 0.98) 100%);
+    z-index: 100;
+    animation: fadeIn 0.5s ease;
+}
+
+.overlay.hidden {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.overlay-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 500px;
+}
+
+.start-content {
+    max-width: 550px;
+}
+
+/* Title Styles */
+.game-title {
+    font-family: var(--font-display);
+    font-size: 4rem;
+    font-weight: 900;
+    line-height: 1.1;
+    color: var(--color-text);
+    text-shadow: 
+        0 0 20px rgba(0, 240, 255, 0.5),
+        0 0 40px rgba(0, 240, 255, 0.3),
+        0 0 60px rgba(0, 240, 255, 0.2);
+    margin-bottom: 10px;
+    animation: titlePulse 3s ease-in-out infinite;
+}
+
+.game-title .accent {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+@keyframes titlePulse {
+    0%, 100% { 
+        text-shadow: 
+            0 0 20px rgba(0, 240, 255, 0.5),
+            0 0 40px rgba(0, 240, 255, 0.3),
+            0 0 60px rgba(0, 240, 255, 0.2);
+    }
+    50% { 
+        text-shadow: 
+            0 0 30px rgba(0, 240, 255, 0.7),
+            0 0 60px rgba(0, 240, 255, 0.5),
+            0 0 90px rgba(0, 240, 255, 0.3);
+    }
+}
+
+.title-decoration {
+    width: 200px;
+    height: 3px;
+    margin: 20px auto;
+    background: var(--gradient-primary);
+    border-radius: 2px;
+    box-shadow: var(--glow-primary);
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    color: var(--color-text-dim);
+    margin-bottom: 30px;
+    letter-spacing: 1px;
+}
+
+.pause-title,
+.gameover-title {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+
+.pause-title {
+    color: var(--color-primary);
+    text-shadow: var(--glow-primary);
+}
+
+.gameover-title {
+    color: var(--color-secondary);
+    text-shadow: var(--glow-secondary);
+}
+
+/* Menu Buttons */
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* Wallet Display */
+.wallet-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 25px;
+    margin-bottom: 15px;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 10px;
+}
+
+.wallet-label {
+    font-size: 0.9rem;
+    color: var(--color-text-dim);
+}
+
+.wallet-coins {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-shadow: var(--glow-accent);
+}
+
+/* Controls Info */
+.controls-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    color: var(--color-text-dim);
+}
+
+.key {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 40px;
+    height: 32px;
+    padding: 0 10px;
+    background: rgba(0, 240, 255, 0.1);
+    border: 1px solid var(--color-primary-dim);
+    border-radius: 6px;
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    letter-spacing: 1px;
+}
+
+/* Buttons */
+.game-button {
+    position: relative;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 200px;
+    padding: 16px 40px;
+    margin: 5px;
+    background: var(--gradient-primary);
+    border: none;
+    border-radius: 50px;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-bg-dark);
+    letter-spacing: 2px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all var(--transition-normal);
+    box-shadow: var(--glow-primary);
+}
+
+.game-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 0 30px rgba(0, 240, 255, 0.6),
+        0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.game-button:active {
+    transform: translateY(0);
+}
+
+.game-button.secondary {
+    background: transparent;
+    border: 2px solid var(--color-primary-dim);
+    color: var(--color-primary);
+    box-shadow: none;
+}
+
+.game-button.secondary:hover {
+    background: rgba(0, 240, 255, 0.1);
+    border-color: var(--color-primary);
+    box-shadow: var(--glow-primary);
+}
+
+.button-glow {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s ease;
+}
+
+.game-button:hover .button-glow {
+    left: 100%;
+}
+
+.hint {
+    margin-top: 20px;
+    font-size: 0.85rem;
+    color: var(--color-accent);
+    opacity: 0.8;
+}
+
+/* Final Stats */
+.final-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding: 25px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-row.highlight {
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--color-text-dim);
+    letter-spacing: 1px;
+}
+
+.stat-value {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    text-shadow: var(--glow-primary);
+}
+
+.coins-earned {
+    color: var(--color-accent) !important;
+    text-shadow: var(--glow-accent) !important;
+}
+
+#highscore-display {
+    margin-bottom: 20px;
+}
+
+.new-highscore {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-shadow: var(--glow-accent);
+    animation: highscorePulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes highscorePulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.05); }
+}
+
+/* ========================================
+   SHOP STYLES
+   ======================================== */
+
+.shop-content {
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.shop-title {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-shadow: var(--glow-accent);
+    margin-bottom: 20px;
+}
+
+.shop-wallet {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 30px;
+    margin-bottom: 25px;
+    background: rgba(255, 215, 0, 0.1);
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: 12px;
+}
+
+.shop-wallet span:first-child {
+    font-size: 1rem;
+    color: var(--color-text-dim);
+}
+
+.shop-coins {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-shadow: var(--glow-accent);
+}
+
+.shop-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.shop-tab {
+    padding: 12px 25px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-dim);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.shop-tab:hover {
+    background: rgba(0, 240, 255, 0.1);
+    border-color: var(--color-primary-dim);
+    color: var(--color-primary);
+}
+
+.shop-tab.active {
+    background: var(--gradient-primary);
+    border-color: var(--color-primary);
+    color: var(--color-bg-dark);
+}
+
+.shop-section { margin-bottom: 25px; }
+.shop-section.hidden { display: none; }
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    max-height: 350px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.shop-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 15px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.shop-item:hover {
+    transform: translateY(-3px);
+    border-color: var(--color-primary-dim);
+    background: rgba(0, 240, 255, 0.05);
+}
+
+.shop-item.owned { border-color: var(--color-success); background: rgba(0, 255, 136, 0.1); }
+.shop-item.equipped { border-color: var(--color-accent); background: rgba(255, 215, 0, 0.15); box-shadow: var(--glow-accent); }
+
+.shop-item-preview {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.shop-item-name {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.shop-item-price {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+.shop-item-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.shop-item-status.owned { background: rgba(0, 255, 136, 0.2); color: var(--color-success); }
+.shop-item-status.equipped { background: rgba(255, 215, 0, 0.2); color: var(--color-accent); }
+
+/* ========================================
+   NOTIFICATIONS - No Overlap
+   ======================================== */
+
+.notification {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 20px 60px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid var(--color-primary);
+    border-radius: 12px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.notification.visible {
+    opacity: 1;
+    animation: notificationPop 0.4s ease;
+}
+
+.notification.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.notification-text {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-shadow: var(--glow-primary);
+    letter-spacing: 4px;
+}
+
+.boss-notification {
+    border-color: var(--color-secondary);
+    background: rgba(255, 51, 102, 0.2);
+}
+
+.boss-notification.visible {
+    animation: bossAlert 0.4s ease, bossPulse 0.4s ease-in-out infinite alternate;
+}
+
+.boss-text {
+    color: var(--color-secondary) !important;
+    text-shadow: var(--glow-secondary) !important;
+    font-size: 2rem !important;
+}
+
+@keyframes bossAlert {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    50% { transform: translate(-50%, -50%) scale(1.1); }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes bossPulse {
+    from { box-shadow: 0 0 20px rgba(255, 51, 102, 0.5); }
+    to { box-shadow: 0 0 40px rgba(255, 51, 102, 0.8); }
+}
+
+.wave-clear-notification {
+    border-color: var(--color-success);
+    background: rgba(0, 255, 136, 0.2);
+}
+
+.wave-clear-text {
+    color: var(--color-success) !important;
+    text-shadow: 0 0 20px rgba(0, 255, 136, 0.5) !important;
+}
+
+@keyframes notificationPop {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    50% { transform: translate(-50%, -50%) scale(1.1); }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+    .hud-box { padding: 8px 16px; }
+    .hud-value { font-size: 1.4rem; }
+    .game-title { font-size: 2.5rem; }
+    .overlay-content { padding: 20px; }
+    .shop-content { max-width: 95%; }
+    .shop-grid { grid-template-columns: repeat(2, 1fr); }
+    .controls-info { padding: 15px; }
+    .control-row { font-size: 0.85rem; }
+    .key { min-width: 35px; height: 28px; font-size: 0.65rem; }
+    .game-button { min-width: 160px; padding: 12px 30px; font-size: 0.9rem; }
+    .shop-tabs { flex-wrap: wrap; }
+    .shop-tab { padding: 10px 18px; font-size: 0.8rem; }
+    .powerup-name { display: none; }
+    .powerup-bar { width: 60px; }
+}
+
+@media (max-width: 480px) {
+    .game-title { font-size: 2rem; }
+    .subtitle { font-size: 0.9rem; }
+    #top-right-hud { display: none; }
+    .shop-title { font-size: 1.8rem; }
+    .notification-text { font-size: 1.8rem; letter-spacing: 2px; }
+    .boss-text { font-size: 1.5rem !important; }
+}
+
+/* Scrollbar */
+.shop-grid::-webkit-scrollbar, .shop-content::-webkit-scrollbar { width: 8px; }
+.shop-grid::-webkit-scrollbar-track, .shop-content::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+.shop-grid::-webkit-scrollbar-thumb, .shop-content::-webkit-scrollbar-thumb { background: var(--color-primary-dim); border-radius: 4px; }
+.shop-grid::-webkit-scrollbar-thumb:hover, .shop-content::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }

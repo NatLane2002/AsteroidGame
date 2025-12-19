@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Asteroid Blaster - A classic arcade-style asteroid shooter game with modern graphics, cat alien bosses, and customization shop">
+    <title>Asteroid Blaster - Space Shooter Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- HUD Overlay - Reorganized Layout -->
+        <div id="hud">
+            <!-- Top Left: Score Only -->
+            <div id="top-left-hud">
+                <div id="score-container" class="hud-box">
+                    <span class="hud-label">SCORE</span>
+                    <span id="score" class="hud-value">0</span>
+                </div>
+            </div>
+
+            <!-- Top Right: Lives Only -->
+            <div id="top-right-hud">
+                <div id="lives-container" class="hud-box">
+                    <span class="hud-label">LIVES</span>
+                    <div id="lives"></div>
+                </div>
+            </div>
+
+            <!-- Bottom Left: Coins + Powerups -->
+            <div id="bottom-left-hud">
+                <div id="coins-container" class="hud-box">
+                    <span class="hud-label">COINS</span>
+                    <div class="coins-display">
+                        <span class="coin-icon">🪙</span>
+                        <span id="coins" class="hud-value coins-value">0</span>
+                    </div>
+                </div>
+                <div id="powerup-container">
+                    <div id="shield-indicator" class="powerup-indicator hidden">
+                        <span class="powerup-icon">🛡️</span>
+                        <span class="powerup-name">Shield</span>
+                        <div class="powerup-bar"><div id="shield-bar"></div></div>
+                    </div>
+                    <div id="rapidfire-indicator" class="powerup-indicator hidden">
+                        <span class="powerup-icon">⚡</span>
+                        <span class="powerup-name">Rapid Fire</span>
+                        <div class="powerup-bar"><div id="rapidfire-bar"></div></div>
+                    </div>
+                    <div id="magnet-indicator" class="powerup-indicator hidden">
+                        <span class="powerup-icon">🧲</span>
+                        <span class="powerup-name">Coin Magnet</span>
+                        <div class="powerup-bar"><div id="magnet-bar"></div></div>
+                    </div>
+                    <div id="timeslow-indicator" class="powerup-indicator hidden">
+                        <span class="powerup-icon">⏱️</span>
+                        <span class="powerup-name">Time Slow</span>
+                        <div class="powerup-bar"><div id="timeslow-bar"></div></div>
+                    </div>
+                    <div id="piercing-indicator" class="powerup-indicator hidden">
+                        <span class="powerup-icon">🎯</span>
+                        <span class="powerup-name">Piercing Shot</span>
+                        <div class="powerup-bar"><div id="piercing-bar"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Right: Level -->
+            <div id="bottom-right-hud">
+                <div id="level-container" class="hud-box">
+                    <span class="hud-label">LEVEL</span>
+                    <span id="level" class="hud-value">1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="overlay">
+            <div class="overlay-content start-content">
+                <h1 class="game-title">ASTEROID<br><span class="accent">BLASTER</span></h1>
+                <div class="title-decoration"></div>
+                <p class="subtitle">Navigate through the asteroid field and defeat the Cat Aliens!</p>
+                <div class="controls-info">
+                    <div class="control-row">
+                        <span class="key">W</span> or <span class="key">↑</span>
+                        <span>Thrust</span>
+                    </div>
+                    <div class="control-row">
+                        <span class="key">A</span><span class="key">D</span> or <span class="key">←</span><span class="key">→</span>
+                        <span>Rotate</span>
+                    </div>
+                    <div class="control-row">
+                        <span class="key">SPACE</span>
+                        <span>Fire</span>
+                    </div>
+                </div>
+                <div class="menu-buttons">
+                    <button id="start-button" class="game-button">
+                        <span>START GAME</span>
+                        <div class="button-glow"></div>
+                    </button>
+                    <button id="shop-button" class="game-button secondary">
+                        <span>🛒 SHOP</span>
+                    </button>
+                </div>
+                <div class="wallet-display">
+                    <span class="wallet-label">Your Coins:</span>
+                    <span class="wallet-coins">🪙 <span id="wallet-coins">0</span></span>
+                </div>
+                <p class="hint">Collect power-ups and defeat Cat Alien bosses each level!</p>
+            </div>
+        </div>
+
+        <!-- Shop Screen -->
+        <div id="shop-screen" class="overlay hidden">
+            <div class="overlay-content shop-content">
+                <h2 class="shop-title">🛒 SPACE SHOP</h2>
+                <div class="shop-wallet">
+                    <span>Your Coins:</span>
+                    <span class="shop-coins">🪙 <span id="shop-wallet-coins">0</span></span>
+                </div>
+                
+                <div class="shop-tabs">
+                    <button class="shop-tab active" data-tab="skins">🚀 Ships</button>
+                    <button class="shop-tab" data-tab="trails">✨ Trails</button>
+                    <button class="shop-tab" data-tab="bullets">💫 Bullets</button>
+                </div>
+                
+                <div class="shop-section" id="skins-section">
+                    <div class="shop-grid" id="skins-grid"></div>
+                </div>
+                
+                <div class="shop-section hidden" id="trails-section">
+                    <div class="shop-grid" id="trails-grid"></div>
+                </div>
+                
+                <div class="shop-section hidden" id="bullets-section">
+                    <div class="shop-grid" id="bullets-grid"></div>
+                </div>
+                
+                <button id="shop-close-button" class="game-button secondary">
+                    <span>← BACK TO MENU</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Pause Screen -->
+        <div id="pause-screen" class="overlay hidden">
+            <div class="overlay-content">
+                <h2 class="pause-title">PAUSED</h2>
+                <div class="menu-buttons">
+                    <button id="resume-button" class="game-button">
+                        <span>RESUME</span>
+                        <div class="button-glow"></div>
+                    </button>
+                    <button id="restart-button" class="game-button secondary">
+                        <span>RESTART</span>
+                    </button>
+                    <button id="pause-home-button" class="game-button secondary">
+                        <span>Start Menu</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="overlay hidden">
+            <div class="overlay-content">
+                <h2 class="gameover-title">GAME OVER</h2>
+                <div class="final-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">Final Score</span>
+                        <span id="final-score" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Level Reached</span>
+                        <span id="final-level" class="stat-value">1</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Asteroids Destroyed</span>
+                        <span id="asteroids-destroyed" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Cat Aliens Defeated</span>
+                        <span id="aliens-destroyed" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-row highlight">
+                        <span class="stat-label">Coins Earned</span>
+                        <span id="coins-earned" class="stat-value coins-earned">🪙 0</span>
+                    </div>
+                </div>
+                <div id="highscore-display" class="hidden">
+                    <span class="new-highscore">🏆 NEW HIGH SCORE! 🏆</span>
+                </div>
+                <div class="menu-buttons">
+                    <button id="playagain-button" class="game-button">
+                        <span>PLAY AGAIN</span>
+                        <div class="button-glow"></div>
+                    </button>
+                    <button id="gameover-home-button" class="game-button secondary">
+                        <span>Start Menu</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Level Up Notification -->
+        <div id="levelup-notification" class="notification hidden">
+            <span class="notification-text">LEVEL <span id="new-level">2</span></span>
+        </div>
+
+        <!-- Boss Wave Notification -->
+        <div id="boss-notification" class="notification boss-notification hidden">
+            <span class="notification-text boss-text">🐱 CAT ALIENS INCOMING! 🐱</span>
+        </div>
+
+        <!-- Wave Clear Notification -->
+        <div id="wave-clear-notification" class="notification wave-clear-notification hidden">
+            <span class="notification-text wave-clear-text">WAVE CLEARED!</span>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
