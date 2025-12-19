@@ -1687,6 +1687,10 @@ html, body {
     }
     .icon-btn-emoji { font-size: 1.2rem; }
     .icon-btn-text { font-size: 0.6rem; letter-spacing: 1px; }
+
+    .mobile-only {
+        display: flex !important;
+    }
 }
 
 /* Modifier Status on Mod Screen */
@@ -2198,10 +2202,6 @@ html, body {
     /* Ensure ship isn't tiny but world is big */
     #game-container {
         cursor: none;
-    }
-
-    .mobile-only {
-        display: flex !important;
     }
 }
 
