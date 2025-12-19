@@ -1616,14 +1616,20 @@ html, body {
         font-size: 1rem;
     }
     .coin-icon {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
-    #top-left-hud, #top-right-hud, #bottom-left-hud, #bottom-right-hud {
-        top: 10px;
-        left: 10px;
-        right: 10px;
-        bottom: 10px;
+    #top-left-hud { top: 10px; left: 10px; right: auto; bottom: auto; }
+    #top-right-hud { top: 10px; right: 10px; left: auto; bottom: auto; }
+    #bottom-left-hud { bottom: 10px; left: 10px; top: auto; right: auto; gap: 4px; }
+    #bottom-right-hud { bottom: 10px; right: 10px; top: auto; left: auto; }
+
+    .hud-box {
+        min-width: 60px;
+        min-height: 40px;
+        padding: 4px 8px;
+        justify-content: center;
     }
+
     #bottom-left-hud {
         gap: 5px;
     }
@@ -1635,29 +1641,33 @@ html, body {
     .powerup-bar { width: 40px; height: 4px; }
     .powerup-name { display: none; }
     
-    /* Smaller Menus */
+    /* Smaller Menus - EVEN SMALLER FOR GAME OVER */
     .pause-title, .gameover-title {
-        font-size: 1.8rem;
-        margin-bottom: 15px;
+        font-size: 1.4rem;
+        margin-bottom: 8px;
     }
     .overlay-content {
-        padding: 15px;
-        max-width: 320px;
+        padding: 10px;
+        max-width: 280px;
+    }
+    .gameover-content {
+        max-width: 300px;
+        padding: 8px;
     }
     .final-stats {
-        padding: 15px;
-        margin-bottom: 15px;
-        gap: 8px;
+        padding: 10px;
+        margin-bottom: 10px;
+        gap: 4px;
     }
-    .stat-row { font-size: 0.8rem; }
-    .stat-label { font-size: 0.75rem; }
-    .stat-value { font-size: 1rem; }
+    .stat-row { font-size: 0.7rem; }
+    .stat-label { font-size: 0.65rem; }
+    .stat-value { font-size: 0.85rem; }
     
     .game-button {
-        min-width: 140px;
-        padding: 10px 20px;
-        font-size: 0.85rem;
-        margin: 3px;
+        min-width: 120px;
+        padding: 8px 16px;
+        font-size: 0.75rem;
+        margin: 2px;
     }
 
     .wallet-display {
@@ -2189,5 +2199,14 @@ html, body {
     #game-container {
         cursor: none;
     }
+
+    .mobile-only {
+        display: flex !important;
+    }
+}
+
+/* Default state for mobile-only elements */
+.mobile-only {
+    display: none !important;
 }
 

@@ -23,7 +23,8 @@ let gameData = {
     equippedItems: { skin: 'default', trail: 'default', bullet: 'default', background: 'default' },
     stats: { totalGames: 0, totalAsteroids: 0, totalAliens: 0, totalSpacePirates: 0, totalCoinsEarned: 0 },
     achievements: [], // Array of unlocked achievement IDs
-    modifiers: { fastMode: false, immortalMode: false, slowMode: false, nightmareMode: false }
+    modifiers: { fastMode: false, immortalMode: false, slowMode: false, nightmareMode: false },
+    settings: { mobileZoom: 1800 }
 };
 
 // Timing
@@ -106,6 +107,9 @@ function loadGameData() {
             // Ensure background data exists (for old saves)
             if (!gameData.ownedItems.backgrounds) { gameData.ownedItems.backgrounds = ['default']; }
             if (!gameData.equippedItems.background) { gameData.equippedItems.background = 'default'; }
+            
+            // Ensure settings exist
+            if (!gameData.settings) { gameData.settings = { mobileZoom: 1800 }; }
             
             // Restore modifiers if present in save
             if (gameData.modifiers) {
@@ -399,8 +403,8 @@ function resizeCanvas() {
     isMobile = detectMobile();
     
     if (isMobile) {
-        // PERFECTION: SIGNIFICANTLY zoomed out for mobile - 1800 target width
-        const targetWidth = 1800; 
+        // PERFECTION: SIGNIFICANTLY zoomed out for mobile - user defined target width
+        const targetWidth = gameData.settings?.mobileZoom || 1800; 
         const scale = Math.max(1.5, targetWidth / window.innerWidth);
         
         canvas.width = Math.floor(window.innerWidth * scale);
@@ -2507,6 +2511,12 @@ function updateStatsScreen() {
 document.getElementById('settings-button').addEventListener('click', () => {
     hideOverlay('start-screen');
     showOverlay('settings-screen');
+    
+    // Sync zoom slider
+    if (zoomSlider && gameData.settings?.mobileZoom) {
+        zoomSlider.value = gameData.settings.mobileZoom;
+        zoomValueLabel.textContent = getZoomLevelName(gameData.settings.mobileZoom);
+    }
 });
 document.getElementById('settings-close-button').addEventListener('click', () => {
     hideOverlay('settings-screen');
@@ -2539,6 +2549,27 @@ sfxToggle.addEventListener('click', () => {
     sfxText.textContent = isEnabled ? 'ON' : 'OFF';
     soundManager.setSfxEnabled(isEnabled);
 });
+
+// Mobile Zoom slider
+const zoomSlider = document.getElementById('zoom-slider');
+const zoomValueLabel = document.getElementById('zoom-value');
+
+function getZoomLevelName(val) {
+    if (val <= 1400) return 'Close';
+    if (val <= 1800) return 'Medium';
+    if (val <= 2100) return 'Wide';
+    return 'Ultra Wide';
+}
+
+if (zoomSlider) {
+    zoomSlider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        zoomValueLabel.textContent = getZoomLevelName(val);
+        gameData.settings.mobileZoom = val;
+        saveGameData();
+        resizeCanvas();
+    });
+}
 
 // ========================================
 // MOBILE TOUCH CONTROLS

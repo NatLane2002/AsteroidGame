@@ -334,7 +334,7 @@
 
         <!-- Game Over Screen -->
         <div id="gameover-screen" class="overlay hidden">
-            <div class="overlay-content">
+            <div class="overlay-content gameover-content">
                 <h2 class="gameover-title">GAME OVER</h2>
                 <div class="final-stats">
                     <div class="stat-row">
@@ -456,6 +456,13 @@
                         <button id="sfx-toggle" class="toggle-button active">
                             <span class="toggle-text" id="sfx-text">ON</span>
                         </button>
+                    </div>
+                    <div class="setting-row mobile-only" id="mobile-zoom-setting">
+                        <span class="setting-label">🔍 Mobile FOV</span>
+                        <div class="volume-control">
+                            <input type="range" id="zoom-slider" min="1200" max="2400" step="100" value="1800" class="volume-slider">
+                            <span id="zoom-value" class="volume-value">Medium</span>
+                        </div>
                     </div>
                 </div>
                 <button id="settings-close-button" class="game-button secondary">
