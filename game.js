@@ -24,7 +24,7 @@ let gameData = {
     stats: { totalGames: 0, totalAsteroids: 0, totalAliens: 0, totalSpacePirates: 0, totalJellyfish: 0, totalCoinsEarned: 0 },
     achievements: [], // Array of unlocked achievement IDs
     modifiers: { fastMode: false, immortalMode: false, slowMode: false, nightmareMode: false },
-    settings: { mobileZoom: 1800, controlScheme: 'keyboard' }
+    settings: { mobileZoom: 1800, controlScheme: 'keyboard', mobileControlStyle: 'dynamic' }
 };
 
 // Timing
@@ -121,9 +121,11 @@ function loadGameData() {
             if (!gameData.equippedItems.background) { gameData.equippedItems.background = 'default'; }
             
             // Ensure settings exist
-            if (!gameData.settings) { gameData.settings = { mobileZoom: 1800, controlScheme: 'keyboard' }; }
+            if (!gameData.settings) { gameData.settings = { mobileZoom: 1800, controlScheme: 'keyboard', mobileControlStyle: 'dynamic' }; }
             // Ensure controlScheme exists (for old saves)
             if (!gameData.settings.controlScheme) { gameData.settings.controlScheme = 'keyboard'; }
+            // Ensure mobileControlStyle exists (for old saves)
+            if (!gameData.settings.mobileControlStyle) { gameData.settings.mobileControlStyle = 'dynamic'; }
             
             // Restore modifiers if present in save
             if (gameData.modifiers) {
@@ -434,11 +436,24 @@ function resizeCanvas() {
 function randomRange(min, max) { return Math.random() * (max - min) + min; }
 function randomInt(min, max) { return Math.floor(randomRange(min, max + 1)); }
 function distance(x1, y1, x2, y2) { return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2); }
+
+// Helper to get effective play area height
+// When fixed mobile controls are active, the bottom third of the screen is reserved for controls
+function getEffectivePlayAreaHeight() {
+    const isFixedControlsActive = isMobile && gameData.settings?.mobileControlStyle === 'fixed';
+    if (isFixedControlsActive) {
+        // Fixed controls take up bottom third - play area is top 66.67%
+        return Math.floor(canvas.height * 0.6667);
+    }
+    return canvas.height;
+}
+
 function wrapPosition(obj) {
+    const effectiveHeight = getEffectivePlayAreaHeight();
     if (obj.x < -50) obj.x = canvas.width + 50;
     if (obj.x > canvas.width + 50) obj.x = -50;
-    if (obj.y < -50) obj.y = canvas.height + 50;
-    if (obj.y > canvas.height + 50) obj.y = -50;
+    if (obj.y < -50) obj.y = effectiveHeight + 50;
+    if (obj.y > effectiveHeight + 50) obj.y = -50;
 }
 function generateStars() {
     stars = [];
@@ -493,7 +508,8 @@ function hideNotificationNow(id) {
 class Ship {
     constructor() { this.reset(); }
     reset() {
-        this.x = canvas.width / 2; this.y = canvas.height / 2;
+        const effectiveHeight = getEffectivePlayAreaHeight();
+        this.x = canvas.width / 2; this.y = effectiveHeight / 2;
         this.vx = 0; this.vy = 0; this.angle = -Math.PI / 2;
         this.thrusting = false; this.lastFireTime = 0;
         this.invulnerable = true; this.invulnerableTime = SHIP_INVULNERABILITY_TIME;
@@ -513,7 +529,8 @@ class Ship {
     }
     // Reset position only - PRESERVES all active powerups!
     resetPosition() {
-        this.x = canvas.width / 2; this.y = canvas.height / 2;
+        const effectiveHeight = getEffectivePlayAreaHeight();
+        this.x = canvas.width / 2; this.y = effectiveHeight / 2;
         this.vx = 0; this.vy = 0; this.angle = -Math.PI / 2;
         this.thrusting = false; this.lastFireTime = 0;
         this.invulnerable = true; this.invulnerableTime = SHIP_INVULNERABILITY_TIME;
@@ -613,8 +630,10 @@ class Ship {
             const thrustMult = getModifierSpeedMultiplier() * (mobileAngle !== null ? mobileThrustMagnitude : 1);
             // In mouse-aim mode, thrust goes in movement direction, not facing direction
             const thrustAngle = (this._moveAngle !== null && this._moveAngle !== undefined) ? this._moveAngle : this.angle;
-            this.vx += Math.cos(thrustAngle) * SHIP_THRUST * dt * thrustMult;
-            this.vy += Math.sin(thrustAngle) * SHIP_THRUST * dt * thrustMult;
+            // Mobile speed reduction: 2/5 (40%) of desktop speed for better control
+            const mobileSpeedMult = isMobile ? 0.4 : 1.0;
+            this.vx += Math.cos(thrustAngle) * SHIP_THRUST * dt * thrustMult * mobileSpeedMult;
+            this.vy += Math.sin(thrustAngle) * SHIP_THRUST * dt * thrustMult * mobileSpeedMult;
             if (Math.random() < 0.5) createThrustParticle(this);
         }
         this.vx *= SHIP_FRICTION; this.vy *= SHIP_FRICTION;
@@ -840,11 +859,13 @@ class Bullet {
         this.y += this.vy * dt;
         
         // Custom wrap logic for bullets - only allow ONE wrap
+        // Use effective height to respect fixed mobile controls boundary
+        const effectiveHeight = getEffectivePlayAreaHeight();
         let wrapped = false;
         if (this.x < -50) { this.x = canvas.width + 50; wrapped = true; }
         if (this.x > canvas.width + 50) { this.x = -50; wrapped = true; }
-        if (this.y < -50) { this.y = canvas.height + 50; wrapped = true; }
-        if (this.y > canvas.height + 50) { this.y = -50; wrapped = true; }
+        if (this.y < -50) { this.y = effectiveHeight + 50; wrapped = true; }
+        if (this.y > effectiveHeight + 50) { this.y = -50; wrapped = true; }
         
         if (wrapped) {
             this.wrapCount++;
@@ -1095,11 +1116,12 @@ class CatAlien {
         this.radius = 30;
         this.health = 2 + Math.floor(lvl / 3); // Slower health scaling
         this.maxHealth = this.health;
+        const effectiveHeight = getEffectivePlayAreaHeight();
         const side = randomInt(0, 3);
-        if (side === 0) { this.x = -50; this.y = randomRange(100, canvas.height - 100); }
-        else if (side === 1) { this.x = canvas.width + 50; this.y = randomRange(100, canvas.height - 100); }
+        if (side === 0) { this.x = -50; this.y = randomRange(100, effectiveHeight - 100); }
+        else if (side === 1) { this.x = canvas.width + 50; this.y = randomRange(100, effectiveHeight - 100); }
         else if (side === 2) { this.x = randomRange(100, canvas.width - 100); this.y = -50; }
-        else { this.x = randomRange(100, canvas.width - 100); this.y = canvas.height + 50; }
+        else { this.x = randomRange(100, canvas.width - 100); this.y = effectiveHeight + 50; }
         this.speed = 30 + lvl * 3; // Much slower: was 40 + lvl * 8
         this.angle = 0;
         this.shootCooldown = Math.max(1500, 3500 - lvl * 100); // Slower shooting: was 2000 - lvl * 150, min 800
@@ -1172,13 +1194,14 @@ class SpacePirate {
         this.radius = 25;
         this.health = 1 + Math.floor(lvl / 4);
         this.maxHealth = this.health;
+        const effectiveHeight = getEffectivePlayAreaHeight();
         // Spawn from sides only
         if (Math.random() > 0.5) {
             this.x = Math.random() > 0.5 ? -40 : canvas.width + 40;
-            this.y = randomRange(50, canvas.height - 50);
+            this.y = randomRange(50, effectiveHeight - 50);
         } else {
             this.x = randomRange(50, canvas.width - 50);
-            this.y = Math.random() > 0.5 ? -40 : canvas.height + 40;
+            this.y = Math.random() > 0.5 ? -40 : effectiveHeight + 40;
         }
         this.speed = 80 + lvl * 5; // Faster than cat aliens
         this.angle = 0;
@@ -1282,12 +1305,13 @@ class CosmicJellyfish {
         this.radius = 28;
         this.health = 2 + Math.floor(lvl / 5);
         this.maxHealth = this.health;
+        const effectiveHeight = getEffectivePlayAreaHeight();
         // Spawn from any edge
         const side = randomInt(0, 3);
-        if (side === 0) { this.x = -50; this.y = randomRange(100, canvas.height - 100); }
-        else if (side === 1) { this.x = canvas.width + 50; this.y = randomRange(100, canvas.height - 100); }
+        if (side === 0) { this.x = -50; this.y = randomRange(100, effectiveHeight - 100); }
+        else if (side === 1) { this.x = canvas.width + 50; this.y = randomRange(100, effectiveHeight - 100); }
         else if (side === 2) { this.x = randomRange(100, canvas.width - 100); this.y = -50; }
-        else { this.x = randomRange(100, canvas.width - 100); this.y = canvas.height + 50; }
+        else { this.x = randomRange(100, canvas.width - 100); this.y = effectiveHeight + 50; }
         
         this.speed = 25 + lvl * 2; // Slow drifting movement
         this.angle = 0;
@@ -1816,9 +1840,10 @@ function showAchievementNotification(achievement) {
 // ========================================
 function spawnAsteroids(count) {
     if (activeModifiers.nightmareMode) count *= 2; // Nightmare Mode: Double asteroids!
+    const effectiveHeight = getEffectivePlayAreaHeight();
     for (let i = 0; i < count; i++) {
         let x, y;
-        do { x = Math.random() * canvas.width; y = Math.random() * canvas.height; } while (ship && distance(x, y, ship.x, ship.y) < 200);
+        do { x = Math.random() * canvas.width; y = Math.random() * effectiveHeight; } while (ship && distance(x, y, ship.x, ship.y) < 200);
         asteroids.push(new Asteroid(x, y, 'large', level));
     }
 }
@@ -3102,6 +3127,8 @@ const zoomSlider = document.getElementById('zoom-slider');
 const zoomValueLabel = document.getElementById('zoom-value');
 
 function getZoomLevelName(val) {
+    if (val <= 700) return 'Super Close';
+    if (val <= 1000) return 'Very Close';
     if (val <= 1400) return 'Close';
     if (val <= 1800) return 'Medium';
     if (val <= 2100) return 'Wide';
@@ -3154,6 +3181,37 @@ if (schemeMouseBtn) {
 
 if (schemeMouseOnlyBtn) {
     schemeMouseOnlyBtn.addEventListener('click', () => setControlScheme('mouse-only'));
+}
+
+// Mobile Control Style Selector (Dynamic vs Fixed)
+const styleDynamicBtn = document.getElementById('style-dynamic');
+const styleFixedBtn = document.getElementById('style-fixed');
+
+function initMobileControlStyleUI() {
+    if (!styleDynamicBtn || !styleFixedBtn) return;
+    
+    const currentStyle = gameData.settings?.mobileControlStyle || 'dynamic';
+    
+    // Update button states
+    styleDynamicBtn.classList.toggle('active', currentStyle === 'dynamic');
+    styleFixedBtn.classList.toggle('active', currentStyle === 'fixed');
+}
+
+function setMobileControlStyle(style) {
+    gameData.settings.mobileControlStyle = style;
+    saveGameData();
+    
+    // Update button states
+    styleDynamicBtn.classList.toggle('active', style === 'dynamic');
+    styleFixedBtn.classList.toggle('active', style === 'fixed');
+}
+
+if (styleDynamicBtn) {
+    styleDynamicBtn.addEventListener('click', () => setMobileControlStyle('dynamic'));
+}
+
+if (styleFixedBtn) {
+    styleFixedBtn.addEventListener('click', () => setMobileControlStyle('fixed'));
 }
 
 // ========================================
@@ -3225,11 +3283,30 @@ function detectMobile() {
 }
 
 function showMobileControls() {
-    document.getElementById('mobile-controls').classList.remove('hidden');
+    const controlStyle = gameData.settings?.mobileControlStyle || 'dynamic';
+    
+    if (controlStyle === 'fixed') {
+        document.getElementById('fixed-mobile-controls').classList.remove('hidden');
+        document.getElementById('mobile-controls').classList.add('hidden');
+    } else {
+        // Dynamic controls: container is shown but individual controls are hidden until touched
+        document.getElementById('mobile-controls').classList.remove('hidden');
+        document.getElementById('fixed-mobile-controls').classList.add('hidden');
+    }
 }
 
 function hideMobileControls() {
     document.getElementById('mobile-controls').classList.add('hidden');
+    document.getElementById('fixed-mobile-controls').classList.add('hidden');
+    
+    // Reset joystick states when hiding
+    const joystickBase = document.getElementById('joystick-base');
+    const joystickStick = document.getElementById('joystick-stick');
+    const fixedJoystickStick = document.getElementById('fixed-joystick-stick');
+    
+    if (joystickBase) joystickBase.style.display = 'none';
+    if (joystickStick) joystickStick.style.transform = 'translate(0, 0)';
+    if (fixedJoystickStick) fixedJoystickStick.style.transform = 'translate(0, 0)';
 }
 
 function initMobileControls() {
@@ -3240,17 +3317,167 @@ function initMobileControls() {
         setTimeout(resizeCanvas, 300);
     });
     
+    // Dynamic controls DOM elements
     const mobileControls = document.getElementById('mobile-controls');
     const joystickBase = document.getElementById('joystick-base');
     const joystickStick = document.getElementById('joystick-stick');
     const fireBtnContainer = document.getElementById('fire-button-container');
     const fireButton = document.getElementById('mobile-fire-button');
     
-    let joystickTouchId = null;
+    // Fixed controls DOM elements
+    const fixedControls = document.getElementById('fixed-mobile-controls');
+    const fixedJoystickBase = document.getElementById('fixed-joystick-base');
+    const fixedJoystickStick = document.getElementById('fixed-joystick-stick');
+    const fixedFireButton = document.getElementById('fixed-fire-button');
     
-    // PERFECTION: Dynamic Touch-to-Show Controls + Triple Tap to Pause (Two Fingers Only)
+    let joystickTouchId = null;
+    let fixedJoystickTouchId = null;
+    
+    // Helper to determine current control style
+    function getControlStyle() {
+        return gameData.settings?.mobileControlStyle || 'dynamic';
+    }
+    
+    // Helper to get joystick center for fixed mode
+    function getFixedJoystickCenter() {
+        if (!fixedJoystickBase) return { x: 0, y: 0 };
+        const rect = fixedJoystickBase.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+    
+    // Unified joystick position update
+    function updateJoystickPosition(clientX, clientY, centerX, centerY, stickElement, maxDist) {
+        let dx = clientX - centerX;
+        let dy = clientY - centerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist > maxDist) {
+            dx = (dx / dist) * maxDist;
+            dy = (dy / dist) * maxDist;
+        }
+        
+        stickElement.style.transform = `translate(${dx}px, ${dy}px)`;
+        
+        // PERFECTION: Absolute Direction Control + Analog Thrust
+        const threshold = 10;
+        if (dist > threshold) {
+            mobileAngle = Math.atan2(dy, dx);
+            mobileThrustMagnitude = (dist - threshold) / (maxDist - threshold);
+            mobileThrusting = mobileThrustMagnitude > 0.1;
+        } else {
+            // Keep current angle but stop thrusting in deadzone
+            mobileThrusting = false;
+            mobileThrustMagnitude = 0;
+        }
+    }
+    
+    // =========================================
+    // FIXED CONTROLS (Gameboy-Style) - Event Handlers
+    // =========================================
+    
+    // Fixed Fire Button - Touch Handlers
+    if (fixedFireButton) {
+        fixedFireButton.addEventListener('touchstart', (e) => {
+            if (currentState !== GameState.PLAYING) return;
+            if (getControlStyle() !== 'fixed') return;
+            e.preventDefault();
+            
+            mobileFireActive = true;
+            mobileFireTouchId = e.changedTouches[0].identifier;
+            keys['Space'] = true;
+            
+            // Visual feedback
+            fixedFireButton.style.transform = 'scale(0.92)';
+            if (navigator.vibrate) navigator.vibrate(20);
+        }, { passive: false });
+        
+        fixedFireButton.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === mobileFireTouchId) {
+                    mobileFireActive = false;
+                    mobileFireTouchId = null;
+                    keys['Space'] = false;
+                    fixedFireButton.style.transform = 'scale(1)';
+                    break;
+                }
+            }
+        }, { passive: false });
+        
+        fixedFireButton.addEventListener('touchcancel', () => {
+            mobileFireActive = false;
+            mobileFireTouchId = null;
+            keys['Space'] = false;
+            fixedFireButton.style.transform = 'scale(1)';
+        }, { passive: false });
+    }
+    
+    // Fixed Joystick - Touch Handlers on the joystick base area
+    if (fixedJoystickBase) {
+        fixedJoystickBase.addEventListener('touchstart', (e) => {
+            if (currentState !== GameState.PLAYING) return;
+            if (getControlStyle() !== 'fixed') return;
+            if (joystickActive) return; // Already active
+            e.preventDefault();
+            
+            const touch = e.changedTouches[0];
+            joystickActive = true;
+            fixedJoystickTouchId = touch.identifier;
+            
+            const center = getFixedJoystickCenter();
+            joystickStartX = center.x;
+            joystickStartY = center.y;
+            
+            // Calculate max distance based on joystick base size
+            const rect = fixedJoystickBase.getBoundingClientRect();
+            const maxDist = (rect.width / 2) * 0.55; // 55% of radius
+            
+            updateJoystickPosition(touch.clientX, touch.clientY, center.x, center.y, fixedJoystickStick, maxDist);
+        }, { passive: false });
+    }
+    
+    // Global touch move for fixed joystick
+    document.addEventListener('touchmove', (e) => {
+        if (getControlStyle() !== 'fixed') return;
+        if (!joystickActive || fixedJoystickTouchId === null) return;
+        
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            if (touch.identifier === fixedJoystickTouchId) {
+                const center = getFixedJoystickCenter();
+                const rect = fixedJoystickBase.getBoundingClientRect();
+                const maxDist = (rect.width / 2) * 0.55;
+                
+                updateJoystickPosition(touch.clientX, touch.clientY, center.x, center.y, fixedJoystickStick, maxDist);
+                break;
+            }
+        }
+    }, { passive: false });
+    
+    // Global touch end for fixed joystick
+    document.addEventListener('touchend', (e) => {
+        if (getControlStyle() !== 'fixed') return;
+        
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === fixedJoystickTouchId) {
+                joystickActive = false;
+                fixedJoystickTouchId = null;
+                fixedJoystickStick.style.transform = 'translate(0, 0)';
+                mobileAngle = null;
+                mobileThrusting = false;
+                mobileThrustMagnitude = 0;
+                break;
+            }
+        }
+    }, { passive: false });
+    
+    // =========================================
+    // DYNAMIC CONTROLS - Event Handlers (Original touch-to-show behavior)
+    // =========================================
+    
+    // Triple Tap to Pause + Dynamic Touch-to-Show Controls
     document.addEventListener('touchstart', (e) => {
         if (currentState !== GameState.PLAYING) return;
+        if (getControlStyle() !== 'dynamic') return;
         
         // TRIPLE TAP DETECTION (TWO FINGERS CLOSE TOGETHER)
         // Prevents accidental pauses during "Joystick + Fire" gameplay
@@ -3278,9 +3505,6 @@ function initMobileControls() {
                     return;
                 }
             }
-        } else {
-            // Count resets if we see single touches too long, but we let time handle it
-            // We do NOT reset count here to allow for imperfect 0->1->2 finger landings
         }
         
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -3303,7 +3527,7 @@ function initMobileControls() {
                     joystickBase.style.display = 'flex';
                     mobileControls.classList.remove('hidden');
                     
-                    updateJoystickPosition(x, y);
+                    updateJoystickPosition(x, y, joystickStartX, joystickStartY, joystickStick, 55);
                 }
             } else {
                 // Right Side: Fire
@@ -3328,43 +3552,20 @@ function initMobileControls() {
     }, { passive: false });
     
     document.addEventListener('touchmove', (e) => {
+        if (getControlStyle() !== 'dynamic') return;
         if (!joystickActive) return;
         
         for (let i = 0; i < e.changedTouches.length; i++) {
             if (e.changedTouches[i].identifier === joystickTouchId) {
-                updateJoystickPosition(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+                updateJoystickPosition(e.changedTouches[i].clientX, e.changedTouches[i].clientY, joystickStartX, joystickStartY, joystickStick, 55);
                 break;
             }
         }
     }, { passive: false });
     
-    function updateJoystickPosition(clientX, clientY) {
-        const maxDist = 55; 
-        let dx = clientX - joystickStartX;
-        let dy = clientY - joystickStartY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+    const handleDynamicTouchEnd = (e) => {
+        if (getControlStyle() !== 'dynamic') return;
         
-        if (dist > maxDist) {
-            dx = (dx / dist) * maxDist;
-            dy = (dy / dist) * maxDist;
-        }
-        
-        joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
-        
-        // PERFECTION: Absolute Direction Control + Analog Thrust
-        const threshold = 10;
-        if (dist > threshold) {
-            mobileAngle = Math.atan2(dy, dx);
-            mobileThrustMagnitude = (dist - threshold) / (maxDist - threshold);
-            mobileThrusting = mobileThrustMagnitude > 0.1;
-        } else {
-            // Keep current angle but stop thrusting in deadzone
-            mobileThrusting = false;
-            mobileThrustMagnitude = 0;
-        }
-    }
-    
-    const handleTouchEnd = (e) => {
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];
             
@@ -3388,8 +3589,41 @@ function initMobileControls() {
         }
     };
     
-    document.addEventListener('touchend', handleTouchEnd);
-    document.addEventListener('touchcancel', handleTouchEnd);
+    document.addEventListener('touchend', handleDynamicTouchEnd);
+    document.addEventListener('touchcancel', handleDynamicTouchEnd);
+    
+    // =========================================
+    // FIXED MODE: Triple Tap to Pause (gesture outside controls)
+    // =========================================
+    document.addEventListener('touchstart', (e) => {
+        if (currentState !== GameState.PLAYING) return;
+        if (getControlStyle() !== 'fixed') return;
+        
+        // Triple tap with two fingers to pause
+        if (e.touches.length === 2) {
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+            
+            if (dist < 350) {
+                const currentTime = Date.now();
+                const tapDelay = 500;
+                
+                if (currentTime - lastTapTime < tapDelay) {
+                    tapCount++;
+                } else {
+                    tapCount = 1;
+                }
+                lastTapTime = currentTime;
+                
+                if (tapCount >= 3) {
+                    tapCount = 0;
+                    pauseGame();
+                    return;
+                }
+            }
+        }
+    }, { passive: false });
     
     // Prevent context menu on long press
     document.addEventListener('contextmenu', (e) => {
@@ -3523,6 +3757,7 @@ function init() {
     loadGameData();
     initModifiersUI(); // Initialize modifier UI state
     initControlSchemeUI(); // Initialize control scheme UI state
+    initMobileControlStyleUI(); // Initialize mobile control style UI state
     resizeCanvas();
     updateHUD();
     updateWalletDisplays();

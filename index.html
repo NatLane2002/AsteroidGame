@@ -549,8 +549,21 @@
                     <div class="setting-row mobile-only" id="mobile-zoom-setting">
                         <span class="setting-label">🔍 Mobile FOV</span>
                         <div class="volume-control">
-                            <input type="range" id="zoom-slider" min="1200" max="2400" step="100" value="1800" class="volume-slider">
+                            <input type="range" id="zoom-slider" min="600" max="2400" step="100" value="1800" class="volume-slider">
                             <span id="zoom-value" class="volume-value">Medium</span>
+                        </div>
+                    </div>
+                    <div class="setting-row mobile-only" id="mobile-control-style-setting">
+                        <span class="setting-label">🎮 Control Style</span>
+                        <div class="control-scheme-selector">
+                            <button id="style-dynamic" class="scheme-btn active" data-style="dynamic">
+                                <span class="scheme-icon">👆</span>
+                                <span class="scheme-name">Dynamic</span>
+                            </button>
+                            <button id="style-fixed" class="scheme-btn" data-style="fixed">
+                                <span class="scheme-icon">🎮</span>
+                                <span class="scheme-name">Fixed</span>
+                            </button>
                         </div>
                     </div>
                     
@@ -568,7 +581,7 @@
             </div>
         </div>
 
-        <!-- Mobile Touch Controls -->
+        <!-- Mobile Touch Controls (Dynamic Mode) -->
         <div id="mobile-controls" class="mobile-controls">
             <!-- Left side: Joystick for movement -->
             <div id="joystick-container" class="joystick-container">
@@ -582,6 +595,25 @@
                     <span>🔥</span>
                     <span class="fire-label">FIRE</span>
                 </button>
+            </div>
+        </div>
+
+        <!-- Fixed Mobile Controls (Gameboy-Style Mode) -->
+        <div id="fixed-mobile-controls" class="fixed-mobile-controls hidden">
+            <div class="fixed-controls-panel">
+                <!-- Left side: Large Joystick -->
+                <div class="fixed-joystick-area">
+                    <div id="fixed-joystick-base" class="fixed-joystick-base">
+                        <div id="fixed-joystick-stick" class="fixed-joystick-stick"></div>
+                    </div>
+                </div>
+                <!-- Right side: Fire Button -->
+                <div class="fixed-fire-area">
+                    <button id="fixed-fire-button" class="fixed-fire-button">
+                        <span class="fire-icon">🔥</span>
+                        <span class="fire-text">FIRE</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
