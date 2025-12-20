@@ -438,28 +438,56 @@ function randomInt(min, max) { return Math.floor(randomRange(min, max + 1)); }
 function distance(x1, y1, x2, y2) { return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2); }
 
 // Helper to get effective play area height
-// When fixed mobile controls are active, the bottom third of the screen is reserved for controls
+// When fixed mobile controls are active, dynamically calculate based on actual control panel position
 function getEffectivePlayAreaHeight() {
     const isFixedControlsActive = isMobile && gameData.settings?.mobileControlStyle === 'fixed';
     if (isFixedControlsActive) {
-        // Fixed controls take up bottom third - play area is top 66.67%
-        return Math.floor(canvas.height * 0.6667);
+        // Get the fixed controls panel element
+        const controlsPanel = document.getElementById('fixed-mobile-controls');
+        if (controlsPanel && !controlsPanel.classList.contains('hidden')) {
+            // Get the actual pixel position of the top of the controls panel
+            const controlsRect = controlsPanel.getBoundingClientRect();
+            const controlsTopInViewport = controlsRect.top;
+            
+            // Calculate the ratio of usable screen height
+            // The controls start at controlsTopInViewport and we want to use everything above it
+            const viewportHeight = window.innerHeight;
+            const usableRatio = controlsTopInViewport / viewportHeight;
+            
+            // Apply this ratio to the canvas height
+            return Math.floor(canvas.height * usableRatio);
+        }
+        // Fallback: If controls panel isn't found or is hidden, use 66% as a safe default
+        return Math.floor(canvas.height * 0.667);
     }
     return canvas.height;
 }
 
 function wrapPosition(obj) {
     const effectiveHeight = getEffectivePlayAreaHeight();
+    const isFixedControlsActive = isMobile && gameData.settings?.mobileControlStyle === 'fixed';
+    
+    // Standard horizontal wrapping with buffer
     if (obj.x < -50) obj.x = canvas.width + 50;
     if (obj.x > canvas.width + 50) obj.x = -50;
-    if (obj.y < -50) obj.y = effectiveHeight + 50;
-    if (obj.y > effectiveHeight + 50) obj.y = -50;
+    
+    // Vertical wrapping - no buffer at bottom when fixed controls are active
+    if (obj.y < -50) obj.y = effectiveHeight - 10; // Appear from bottom of play area
+    
+    if (isFixedControlsActive) {
+        // STRICT boundary: Objects cannot go beyond effectiveHeight at all
+        if (obj.y > effectiveHeight) obj.y = -30; // Wrap to top immediately
+    } else {
+        // Standard wrapping with buffer for non-fixed controls
+        if (obj.y > effectiveHeight + 50) obj.y = -50;
+    }
 }
 function generateStars() {
     stars = [];
-    const count = Math.floor((canvas.width * canvas.height) / 3000);
+    const effectiveHeight = getEffectivePlayAreaHeight();
+    const count = Math.floor((canvas.width * effectiveHeight) / 3000);
     for (let i = 0; i < count; i++) {
-        stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, radius: Math.random() * 1.5 + 0.5, brightness: Math.random() * 0.5 + 0.5, twinkleSpeed: Math.random() * 2 + 1 });
+        stars.push({ x: Math.random() * canvas.width, y: Math.random() * effectiveHeight, radius: Math.random() * 1.5 + 0.5, brightness: Math.random() * 0.5 + 0.5, twinkleSpeed: Math.random() * 2 + 1 });
     }
 }
 
@@ -861,11 +889,19 @@ class Bullet {
         // Custom wrap logic for bullets - only allow ONE wrap
         // Use effective height to respect fixed mobile controls boundary
         const effectiveHeight = getEffectivePlayAreaHeight();
+        const isFixedControlsActive = isMobile && gameData.settings?.mobileControlStyle === 'fixed';
         let wrapped = false;
+        
         if (this.x < -50) { this.x = canvas.width + 50; wrapped = true; }
         if (this.x > canvas.width + 50) { this.x = -50; wrapped = true; }
-        if (this.y < -50) { this.y = effectiveHeight + 50; wrapped = true; }
-        if (this.y > effectiveHeight + 50) { this.y = -50; wrapped = true; }
+        if (this.y < -50) { this.y = effectiveHeight - 10; wrapped = true; }
+        
+        // Strict bottom boundary for fixed controls
+        if (isFixedControlsActive) {
+            if (this.y > effectiveHeight) { this.y = -30; wrapped = true; }
+        } else {
+            if (this.y > effectiveHeight + 50) { this.y = -50; wrapped = true; }
+        }
         
         if (wrapped) {
             this.wrapCount++;
@@ -1900,6 +1936,9 @@ function initGameLogic() {
     
     // Show mobile controls if needed
     if (isMobile) showMobileControls();
+    
+    // Regenerate stars with correct effective height (important for fixed controls)
+    generateStars();
 }
 
 // New Start Game Manager

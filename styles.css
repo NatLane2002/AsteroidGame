@@ -3296,3 +3296,215 @@ body.is-mobile .mobile-only {
         height: min(120px, 22vh);
     }
 }
+
+/* ========================================
+   MOBILE SETTINGS PAGE - COMPACT 2-COLUMN LAYOUT
+   ======================================== */
+
+body.is-mobile .settings-content {
+    max-width: 95%;
+    padding: 15px;
+}
+
+body.is-mobile .settings-title {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+}
+
+body.is-mobile .settings-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+body.is-mobile .setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+body.is-mobile .setting-label {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+body.is-mobile .volume-control {
+    width: 100%;
+    flex-direction: column;
+    gap: 6px;
+}
+
+body.is-mobile .volume-slider {
+    width: 100%;
+    height: 6px;
+}
+
+body.is-mobile .volume-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+}
+
+body.is-mobile .volume-value {
+    font-size: 0.7rem;
+    min-width: auto;
+}
+
+body.is-mobile .toggle-button {
+    padding: 6px 12px;
+    font-size: 0.7rem;
+    border-radius: 20px;
+    width: 100%;
+    text-align: center;
+}
+
+body.is-mobile .toggle-text {
+    font-size: 0.7rem;
+}
+
+/* Control scheme selector for mobile */
+body.is-mobile .control-scheme-selector {
+    width: 100%;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+body.is-mobile .scheme-btn {
+    padding: 6px 8px;
+    min-width: 55px;
+    border-radius: 6px;
+    gap: 2px;
+}
+
+body.is-mobile .scheme-icon {
+    font-size: 1rem;
+}
+
+body.is-mobile .scheme-name {
+    font-size: 0.5rem;
+    letter-spacing: 0;
+}
+
+/* Make settings close button smaller on mobile */
+body.is-mobile .settings-content .game-button {
+    padding: 8px 20px;
+    font-size: 0.75rem;
+    min-width: 120px;
+}
+
+/* Span full-width for certain settings on mobile */
+body.is-mobile .setting-row.desktop-only,
+body.is-mobile #mobile-control-style-setting {
+    grid-column: span 2;
+}
+
+/* Account settings full width */
+body.is-mobile #account-settings-row {
+    grid-column: span 2;
+}
+
+/* Settings hint smaller */
+body.is-mobile .settings-hint {
+    font-size: 0.65rem;
+    margin-top: 8px;
+    margin-bottom: 10px;
+}
+
+/* ========================================
+   MOBILE SHOP PAGE - FIXED BACK BUTTON
+   ======================================== */
+
+/* Ensure shop screen is a proper flex container - ONLY when not hidden */
+body.is-mobile #shop-screen:not(.hidden) {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* Transform shop content into a flex-column with fixed height */
+body.is-mobile .shop-content {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 90vh !important;
+    width: 95vw !important;
+    padding: 15px !important;
+    overflow: hidden !important;
+    background: rgba(10, 10, 25, 0.98) !important;
+    border-radius: 15px !important;
+}
+
+/* Keep shop title fixed at top */
+body.is-mobile .shop-title {
+    margin: 0 0 10px 0 !important;
+    flex-shrink: 0 !important;
+    font-size: 1.5rem !important;
+}
+
+/* Keep wallet fixed at top */
+body.is-mobile .shop-wallet {
+    margin-bottom: 10px !important;
+    flex-shrink: 0 !important;
+    padding: 8px 15px !important;
+    font-size: 0.9rem !important;
+}
+
+/* Keep tabs fixed at top */
+body.is-mobile .shop-tabs {
+    margin-bottom: 10px !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+    justify-content: center !important;
+}
+
+body.is-mobile .shop-tab {
+    padding: 8px 12px !important;
+    font-size: 0.75rem !important;
+}
+
+/* Make only the items section scrollable */
+body.is-mobile .shop-section {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding-right: 5px !important;
+    margin-bottom: 10px !important;
+    min-height: 0 !important; /* Critical for flex scroll */
+}
+
+/* Smaller grid items on mobile */
+body.is-mobile .shop-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+    gap: 8px !important;
+}
+
+body.is-mobile .shop-item {
+    padding: 10px 8px !important;
+}
+
+body.is-mobile .shop-item-name {
+    font-size: 0.65rem !important;
+}
+
+body.is-mobile .shop-item-preview {
+    width: 45px !important;
+    height: 45px !important;
+    margin-bottom: 8px !important;
+}
+
+/* FIX: Keep Back to Menu button ALWAYS visible at bottom */
+body.is-mobile #shop-close-button {
+    position: relative !important;
+    width: 100% !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    padding: 12px 20px !important;
+    z-index: 100 !important;
+}
