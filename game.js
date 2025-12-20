@@ -2210,6 +2210,8 @@ function update(dt) {
     for (let i = bullets.length - 1; i >= 0; i--) {
         if (!bullets[i] || !bullets[i].isPlayer) continue;
         for (let j = catAliens.length - 1; j >= 0; j--) {
+            // Safety check: skip if entity was destroyed by blast radius
+            if (!catAliens[j]) continue;
             if (distance(bullets[i].x, bullets[i].y, catAliens[j].x, catAliens[j].y) < bullets[i].radius + catAliens[j].radius) {
                 // Blast radius powerup: trigger splash damage on hit
                 if (bullets[i].hasBlastRadius) {
@@ -2226,7 +2228,8 @@ function update(dt) {
                     score += Math.floor(500 * level * comboMult);
                     aliensDestroyed++;
                     catAliens.splice(j, 1);
-                } else {
+                } else if (catAliens[j]) {
+                    // Only create hit effect if alien still exists (might have been destroyed by blast radius)
                     createExplosion(catAliens[j].x, catAliens[j].y, '#ffffff', 5);
                 }
                 if (bullets[i].piercing) {
@@ -2253,6 +2256,8 @@ function update(dt) {
     for (let i = bullets.length - 1; i >= 0; i--) {
         if (!bullets[i] || !bullets[i].isPlayer) continue;
         for (let j = spacePirates.length - 1; j >= 0; j--) {
+            // Safety check: skip if entity was destroyed by blast radius
+            if (!spacePirates[j]) continue;
             if (distance(bullets[i].x, bullets[i].y, spacePirates[j].x, spacePirates[j].y) < bullets[i].radius + spacePirates[j].radius) {
                 // Blast radius powerup: trigger splash damage on hit
                 if (bullets[i].hasBlastRadius) {
@@ -2269,7 +2274,8 @@ function update(dt) {
                     aliensDestroyed++;
                     spacePiratesDestroyed++;
                     spacePirates.splice(j, 1);
-                } else {
+                } else if (spacePirates[j]) {
+                    // Only create hit effect if pirate still exists (might have been destroyed by blast radius)
                     createExplosion(spacePirates[j].x, spacePirates[j].y, '#ffaa00', 5);
                 }
                 if (bullets[i].piercing) {
@@ -2290,6 +2296,8 @@ function update(dt) {
     for (let i = bullets.length - 1; i >= 0; i--) {
         if (!bullets[i] || !bullets[i].isPlayer) continue;
         for (let j = cosmicJellyfish.length - 1; j >= 0; j--) {
+            // Safety check: skip if entity was destroyed by blast radius
+            if (!cosmicJellyfish[j]) continue;
             if (distance(bullets[i].x, bullets[i].y, cosmicJellyfish[j].x, cosmicJellyfish[j].y) < bullets[i].radius + cosmicJellyfish[j].radius) {
                 // Blast radius powerup: trigger splash damage on hit
                 if (bullets[i].hasBlastRadius) {
@@ -2306,7 +2314,8 @@ function update(dt) {
                     aliensDestroyed++;
                     jellyfishDestroyed++;
                     cosmicJellyfish.splice(j, 1);
-                } else {
+                } else if (cosmicJellyfish[j]) {
+                    // Only create hit effect if jellyfish still exists (might have been destroyed by blast radius)
                     createExplosion(cosmicJellyfish[j].x, cosmicJellyfish[j].y, '#aaccff', 5);
                 }
                 if (bullets[i].piercing) {
